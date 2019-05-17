@@ -96,12 +96,13 @@ until curl -s -o /dev/null http://${ipfqdn}:9000/api/status 2&> /dev/null
   sleep 1
 done
 echo "done"
-curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}' 2&> /dev/null
+curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
 portAuthToken=`curl -s http://${ipfqdn}:9000/api/auth -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'`
 portEndpointID=`curl -s http://${ipfqdn}:9000/api/endpoints -H "Authorization: Bearer $portAuthToken" |jq '.[0].Id'`
 portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/1/docker/swarm -H "Authorization: Bearer $portAuthToken" |jq -r '.ID'`
-
-
+curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PUT \
+    -H "Authorization: Bearer $portAuthToken" \
+    -d '{"Name": "VTMon", "PublicURL": "'${ipfqdn}'"}'
 
 
 # Deploy Traefik, using the Portainer API
@@ -116,8 +117,9 @@ echo "  Update config file with host info"
 sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/configs/Traefik_traefik-traefik.toml-*
 echo "  Create Docker Swarm config files"
 for config in $configs; do
-  echo "    $config"
-  docker config create $config res/swarm/configs/$config >> /dev/null
+  f=`basename $config`
+  echo "    $f"
+  docker config create $f $config >> /dev/null
 done
 echo "  Pull Docker images"
 for image in "traefik:1.7.10-alpine"; do
@@ -125,7 +127,7 @@ for image in "traefik:1.7.10-alpine"; do
   docker pull $image >> /dev/null
 done
 echo " Deploy the stack"
-curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
     -H "accept: application/json" \
     -H "Content-Type: multipart/form-data" \
@@ -135,7 +137,7 @@ curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEn
     -F file=@res/swarm/stacks/traefik.yml 2&> /dev/null
 
 echo -n "  Waiting for services to come up."
-until curl -s -o /dev/null http://${ipfqdn}:8080/api 2&> /dev/null
+until curl -s -o /dev/null http://${ipfqdn}:8080/api
  do 
   echo -n "."
   sleep 1
@@ -145,10 +147,11 @@ echo "done"
 # Deploy Graphite, using the Portainer API
 echo "Deploying Graphite"
 echo "  Make persistent storage"
-for dir in "/opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/"; do
+for dir in /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/; do
   echo "    $dir"
   mkdir -p $dir >> /dev/null
 done
+chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### Set some system options to optimize it for Graphite
 ##echo "  Tuning host system"
 ### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS 
@@ -161,15 +164,16 @@ done
 ##sysctl -w vm.dirty_expire_centisecs=$(( 10*60*100 ))
 echo "  Create Docker Swarm config files"
 for config in `ls res/swarm/configs/Graphite_*`; do
-  echo "    $config"
-  docker config create $config res/swarm/configs/$config >> /dev/null
+  f=`basename $config`
+  echo "    $f"
+  docker config create $f $config >> /dev/null
 done
 echo "  Pull Docker images"
-for image in "openmetric/carbon-c-relay:latest openmetric/go-carbon:latest openmetric/carbonapi:latest"; do
+for image in openmetric/carbon-c-relay:latest openmetric/go-carbon:latest openmetric/carbonapi:latest; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
-curl -v "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
     -H "accept: application/json" \
     -H "Content-Type: multipart/form-data" \
@@ -184,19 +188,20 @@ curl -v "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEn
 # Deploy Grafana, using the Portainer API
 echo "Deploying Grafana"
 echo "  Make persistent storage"
-for dir in "/opt/docker/stack.grafana/service.grafana/data/"; do # /opt/docker/stack.grafana/service.grafana/provisioning
+for dir in /opt/docker/stack.grafana/service.grafana/data/; do # /opt/docker/stack.grafana/service.grafana/provisioning
   echo "    $dir"
   mkdir -p $dir >> /dev/null
 done
+chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 echo "  Update stack file with host info"
 sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/stacks/grafana.yml
 echo "  Pull Docker images"
-for image in "grafana/grafana:latest"; do
+for image in grafana/grafana:latest; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
 echo " Deploy the stack"
-curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
     -H "accept: application/json" \
     -H "Content-Type: multipart/form-data" \
@@ -204,7 +209,28 @@ curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEn
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
-
+# Set Grafana admin password
+echo "  Setting up Grafana"
+echo "    Change admin password"
+curl -s -o /dev/null http://${ipfqdn}/grafana/api/admin/users/1/password -X PUT \
+    -u admin:admin \
+    -H "Content-Type: application/json" \
+    -d '{"password":"'$adminPass'"}' 2&> /dev/null
+echo "    Create default datasource 'graphite'"
+curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
+    -u admin:$adminPass \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false,"isDefault": true}'  2&> /dev/null
+echo "    Create folders"
+for f in `ls res/grafana`; do
+  echo "      ${f%-*}"
+  curl -s -o /dev/null http://${ipfqdn}/grafana/api/folders -X POST \
+      -u admin:$adminPass \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json" \
+      -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' 2&> /dev/null
+done
 
 
 
