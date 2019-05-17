@@ -1,0 +1,29 @@
+version: '3.6'
+
+services:
+  traefik:
+    image: traefik:1.7.10-alpine
+    restart: always
+    ports:
+      - 80:80
+      - 8080:8080
+    networks:
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker/stack.Traefik/service.traefik/logs:/logs
+    container_name: traefik
+    configs:
+      - source: Traefik_traefik-traefik.toml-20190516.0747
+        target: /traefik.toml
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  traefik-net:
+    external: true
+    
+configs:
+  Traefik_traefik-traefik.toml-20190516.0747:
+    external: true

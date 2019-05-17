@@ -1,0 +1,153 @@
+cluster default
+    fnv1a_ch replication 1
+        carbon:2003
+    ;
+
+statistics
+    submit every 60 seconds
+    reset counters after interval
+    prefix with graphite.relay.\.1
+    send to
+        default
+    stop
+    ;
+
+
+###################################################################################################
+###                   VSPHERE
+###################################################################################################
+################### VM ----------------------------------------------------------------------------
+######### Clustered -----------------------------
+match ^vsphere_vm_cpu\.([^.]+)\.[0-9]+
+  send to blackhole
+  stop
+;
+#CPU                     clu                      dc       vc       vm       field
+rewrite ^vsphere_vm_cpu\.([^.]+)\.instance-total\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\3.\2.\1.vm.\4.cpu.\5
+;
+#single             group                   clu      dc       vc       vm       field
+rewrite ^vsphere_vm_(mem|power|rescpu|sys)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\3.\2.vm.\5.\1.\6
+;
+#instanced          group                             clu      dc       ins      vc       vm       field
+rewrite ^vsphere_vm_(datastore|disk|net|virtualDisk)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\5.\3.\2.vm.\6.\1.\4.\7
+;
+
+######## Standalone ----------------------------
+match ^vsphere_vm_cpu\.[0-9]+\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  send to blackhole
+  stop
+;
+#CPU                                     dc       vc       vm        field
+rewrite ^vsphere_vm_cpu\.instance-total\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\2.\1.-None-.vm.\3.cpu.\4
+;
+#single             group                   dc       vc       vm        field
+rewrite ^vsphere_vm_(mem|power|rescpu|sys)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\3.\2.-None-.vm.\4.\1.\5
+;
+#instanced          group                             dc       ins      vc       vm       field
+rewrite ^vsphere_vm_(datastore|disk|net|virtualDisk)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\2.-None-.vm.\5.\1.\3.\6
+;
+
+################### Host --------------------------------------------------------------------------
+######### Clustered -----------------------------
+match ^vsphere_host_cpu\.([^.]+)\.[0-9]+
+    send to blackhole
+    stop
+    ;
+#cpu                      clu                      dc       host     vc       field
+rewrite ^vsphere_host_cpu\.([^.]+)\.instance-total\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\2.\1.host.\3.cpu.\5
+;
+#single               group                  clu      dc       host     vc       field
+rewrite ^vsphere_host_(hbr|mem|power|rescpu)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\5.\3.\2.host.\4.\1.\6
+;
+#instanced            group            clu      dc       ins      host     vc       field
+rewrite ^vsphere_host_(datastore|disk)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\6.\3.\2.host.\5.\1.\4.\7
+;
+#net|vflash|gpu       group                  clu      dc       host      ins     vc       field
+rewrite ^vsphere_host_(net|vflashModule|gpu)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\6.\3.\2.host.\4.\1.\5.\7
+;
+#storageAdapter                      ins      clu      dc       host     vc       field
+rewrite ^vsphere_host_storageAdapter\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\5.\3.\2.host.\4.storageAdapter.\1.\6
+;
+######### Standalone ----------------------------
+match ^vsphere_host_cpu\.[0-9]+\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+    send to blackhole
+    stop
+    ;
+#cpu                                      dc       host     vc       field
+rewrite ^vsphere_host_cpu.instance-total\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\3.\1.-None-.host.\2.cpu.\4
+;
+#single               group                   dc       host     vc       field
+rewrite ^vsphere_host_(hbr|mem|power|rescpu)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\2.-None-.host.\3.\1.\5
+;
+#instanced            group             dc       ins      host     vc       field
+rewrite ^vsphere_host_(datastore|disk)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\5.\2.-None-.host.\4.\1.\3.\6
+;
+#net|vflash|gpu       group                    dc       host      ins     vc       field
+rewrite ^vsphere_host_(net|vflashModule|gpu)\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\5.\2.-None-.host.\3.\1.\4.\6
+;
+#storageAdapter                       ins      dc       host     vc       field
+rewrite ^vsphere_host_storageAdapter\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\2.-None-.host.\3.storageAdapter.\1.\5
+;
+
+
+################### Cluster -----------------------------------------------------------------------
+#all                     group                                clu      dc       vc       field
+rewrite ^vsphere_cluster_(clusterServices|cpu|mem|power|vmop).([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\4.\3.\2.cluster.\1.\5
+;
+
+################### Datastore ---------------------------------------------------------------------
+#all                       group            dc       ds       vc       field
+rewrite ^vsphere_datastore_(datastore|disk).([^.]+)\.([^.]+)\.([^.]+)\.(.*)
+#  into vsphere.\4.\2.datastore.\3.\1.\5
+  into vsphere.\4.\2.datastore.\3.\5
+;
+
+################### Datacenter --------------------------------------------------------------------
+#all                             dc       vc       field
+rewrite ^vsphere_datacenter_vmop.([^.]+)\.([^.]+)\.(.*)
+  into vsphere.\2.\1.datacenter.\3
+;
+
+###################################################################################################
+###                   Hyper-V
+###################################################################################################
+match ^server\.win\..*\.win_disk\.HarddiskVolume[0-9]+
+    send to blackhole
+    stop
+    ;
+rewrite ^(servers.+)\.win_cpu\._Total\.(.+)
+  into \1.win_cpu.\2
+;
+rewrite ^(servers.+)\.win_disk\.(.+)\.Avg\._Disk_sec[\/_-](Read|Write)
+  into \1.win_disk.\2.Avg_Disk_sec_\3
+;
+rewrite ^(servers.+)\.win_disk\.(.+)\.Avg__Disk_sec[\/_-](Read|Write)
+  into \1.win_disk.\2.Avg_Disk_sec_\3
+;
+rewrite ^(servers.+)\.win_(.+)\.%_(.+)
+  into \1.win_\2.Percent_\3
+;
+
+
+match *
+    send to
+        default
+    stop
+    ;

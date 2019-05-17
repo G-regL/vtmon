@@ -1,0 +1,31 @@
+version: "3.6"
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - /opt/docker/stack.grafana/service.grafana/data:/var/lib/grafana
+    healthcheck:
+      test: "curl -fsSL -o /dev/null 'http://localhost:3000/login'"
+      interval: 10s
+      timeout: 1s
+      retries: 3
+    networks:
+      - lbnet
+      - graphite-net
+    environment:
+      - GF_SERVER_ROOT_URL=http://<<HOSTIPFQDN>>/grafana/
+      - GF_INSTALL_PLUGINS=yesoreyeram-boomtable-panel,petrslavotinek-carpetplot-panel,vonage-status-panel,flant-statusmap-panel
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.frontend.rule=PathPrefixStrip:/grafana/"
+        - "traefik.port=3000"
+
+networks:
+  lbnet:
+    external: true
+  graphite-net:
+    external: true

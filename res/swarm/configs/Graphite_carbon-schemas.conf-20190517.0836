@@ -1,0 +1,25 @@
+# each datapoint requires 12 Bytes
+[vsphere-historical-datacenter]
+pattern = ^vsphere\..*\..*\.datacenter\..*
+#            3 months     6 months    1 year      2 year
+retentions = 30m:131399m, 2h:259199m, 6h:525599m, 24h:1051199m
+
+[vsphere-historical-datastore]
+pattern = ^vsphere\..*\..*\.datastore\..*
+#            3 months     6 months    1 year      2 year
+retentions = 30m:131399m, 2h:259199m, 6h:525599m, 24h:1051199m
+
+[vsphere-historical-cluster]
+pattern = ^vsphere\..*\..*\..*\.cluster\..*
+#            3 months     6 months    1 year      2 year
+retentions = 30m:131399m, 2h:259199m, 6h:525599m, 24h:1051199m
+
+[vsphere-realtime]
+pattern = ^vsphere\..*
+#            14 days    3 months     6 months    1 year      2 year
+retentions = 1m:20159m, 30m:131399m, 2h:259199m, 6h:525599m, 24h:1051199m
+
+[default]
+pattern = .*
+#            14 days    3 months     6 months    1 year      2 year
+retentions = 1m:20159m, 30m:131399m, 2h:259199m, 6h:525599m, 24h:1051199m
