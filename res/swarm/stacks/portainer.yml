@@ -38,8 +38,6 @@ services:
         - "traefik.enable=true"
         - "traefik.frontend.rule=PathPrefixStrip:/portainer/"
         - "traefik.port=9000"
-    secrets:
-      - portainer-pass
 
 networks:
   agent_network:
