@@ -223,17 +223,36 @@ curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
     -H "Content-Type: application/json" \
     -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false,"isDefault": true}'  2&> /dev/null
 echo "    Create folders"
+unset grafana_folders
+declare -A grafana_folders
 for f in `ls res/grafana`; do
   echo "      ${f%-*}"
-  curl -s -o /dev/null http://${ipfqdn}/grafana/api/folders -X POST \
+  grafana_folders[${f%-*}]=`curl -s http://${ipfqdn}/grafana/api/folders -X POST \
       -u admin:$adminPass \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
-      -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' 2&> /dev/null
+      -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' | jq -r '.id'`
+done
+echo "    Create dashboards"
+for file in `find res/grafana/ -name *.json`; do
+  folder=`echo $file |cut -d/ -f3 |cut -d- -f1`
+  dashboard=`echo $file |cut -d/ -f4 | cut -d. -f1`
+  sed -i "s/<<FOLDERID>>/${grafana_folders[$folder]}/g" file
+  echo "      $dashboard"
+  curl -s http://${ipfqdn}/grafana/api/dashboards/db -X POST \
+      -u admin:$adminPass \
+      -H "Accept: application/json" \
+      -H "Content-Type: application/json" \
+      -d @$file
 done
 
 
 
+for file in `find res/grafana/ -name *.json`; do
+  folder=`echo $file |cut -d/ -f3 |cut -d- -f1`
+  dashboard=`echo $file |cut -d/ -f4 | cut -d. -f1`
+  echo "$folder (${grafana_folders[$folder]}) -- $dashboard"
+done
 
 #### Deploy Telegraf, using the Portainer API
 ###echo "Deploying Telegraf"
