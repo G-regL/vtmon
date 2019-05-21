@@ -1,6 +1,6 @@
 {
-    "folderId": "<<FOLDERID>>",
-    "overwrite": "true",
+    "folderId": 0,
+    "overwrite": true,
     "dashboard": {
         "annotations": {
             "enable": false,
@@ -19,7 +19,6 @@
         "editable": true,
         "gnetId": 43,
         "graphTooltip": 1,
-        "id": 22,
         "iteration": 1558439961943,
         "links": [],
         "panels": [
@@ -1954,7 +1953,7 @@
         },
         "timezone": "browser",
         "title": "Graphite",
-        "uid": "000000002",
+        "uid": "5f0d34d4",
         "version": 9
     }
 }

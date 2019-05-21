@@ -236,8 +236,10 @@ done
 echo "    Create dashboards"
 for file in `find res/grafana/ -name *.json`; do
   folder=`echo $file |cut -d/ -f3 |cut -d- -f1`
-  dashboard=`echo $file |cut -d/ -f4 | cut -d. -f1`
-  sed -i "s/<<FOLDERID>>/${grafana_folders[$folder]}/g" file
+  dashboard=`echo $file |cut -d/ -f4 | cut -d -f1`
+  
+  jq "del(.dashboard.id) | .folderId = ${grafana_folders[$folder]} | .dashboard.meta.folderId = ${grafana_folders[$folder]}"
+  #sed -i "s/<<FOLDERID>>/${grafana_folders[$folder]}/g" $file
   echo "      $dashboard"
   curl -s http://${ipfqdn}/grafana/api/dashboards/db -X POST \
       -u admin:$adminPass \
@@ -245,7 +247,6 @@ for file in `find res/grafana/ -name *.json`; do
       -H "Content-Type: application/json" \
       -d @$file
 done
-
 
 
 for file in `find res/grafana/ -name *.json`; do
