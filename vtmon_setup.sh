@@ -7,7 +7,7 @@ parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdb1 >> /dev/null
 vgcreate vg01 /dev/sdb1 >> /dev/null
 lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
-mkfs.xfs /dev/mapper/vg01-docker >> /dev/null
+mkfs.xfs -fq /dev/mapper/vg01-docker >> /dev/null
 mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
 # Create the /opt mountpoint
@@ -16,7 +16,7 @@ parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdc1 >> /dev/null
 vgcreate vg02 /dev/sdc1 >> /dev/null
 lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
-mkfs.xfs /dev/mapper/vg02-opt >> /dev/null
+mkfs.xfs -fq /dev/mapper/vg02-opt >> /dev/null
 echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
 # Mount everything
 echo "Mounting all disks"
@@ -25,16 +25,16 @@ mount -a >> /dev/null
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "Removing any old Docker packages"
-sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
+yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
 # Install some dependencies
 echo "Installing some needed packages"
-sudo yum install -y yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
+yum install -y yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
 # Add the official Docker repo
 echo "Adding the official Docker repo"
-sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >> /dev/null
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >> /dev/null
 # Install Docker
 echo "Installing Docker"
-sudo yum install -y docker-ce docker-ce-cli containerd.io >> /dev/null
+yum install -y docker-ce docker-ce-cli containerd.io >> /dev/null
 
 # -------- Docker
 # Copy the Docker configs
@@ -42,8 +42,8 @@ echo "Copy the Docker config files"
 cp -fr res/docker/ /etc/ >> /dev/null
 # Enable, and Start Docker
 echo "Enable and start the Docker service"
-sudo systemctl enable docker >> /dev/null
-sudo systemctl start docker >> /dev/null
+systemctl enable docker >> /dev/null
+systemctl start docker >> /dev/null
 # Initialize the swarm
 echo "Initialize the Docker Swarm"
 docker swarm init >> /dev/null
