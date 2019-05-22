@@ -67,7 +67,7 @@ services:
 
 
   vm:
-    image:  telegraf:1.10.0-alpine
+    image: telegraf:1.10.0-alpine
     command: telegraf
     environment:
       - VCENTERS=$VCENTERS

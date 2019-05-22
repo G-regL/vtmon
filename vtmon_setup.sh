@@ -83,7 +83,7 @@ for dir in "/opt/docker/stack.Portainer/service.portainer"; do
   mkdir -p $dir >> /dev/null
 done
 echo "  Pull Docker images"
-for image in portainer/agent:latest portainer/portainer:latest; do
+for image in `cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq`; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
@@ -121,7 +121,7 @@ for config in $configs; do
   docker config create $f $config >> /dev/null
 done
 echo "  Pull Docker images"
-for image in "traefik:1.7.10-alpine"; do
+for image in `cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq`; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
@@ -168,7 +168,7 @@ for config in `ls res/swarm/configs/Graphite_*`; do
   docker config create $f $config >> /dev/null
 done
 echo "  Pull Docker images"
-for image in openmetric/carbon-c-relay:latest openmetric/go-carbon:latest openmetric/carbonapi:latest; do
+for image in `cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq`; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
@@ -195,7 +195,7 @@ chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 #echo "  Update stack file with host info"
 #sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/stacks/grafana.yml
 echo "  Pull Docker images"
-for image in grafana/grafana:latest; do
+for image in `cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq`; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
@@ -256,7 +256,7 @@ for config in $configs; do
   docker config create $f $config >> /dev/null
 done
 echo "  Pull Docker images"
-for image in telegraf:1.10.0-alpine; do
+for image in `cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq`; do
   echo "    $image"
   docker pull $image >> /dev/null
 done
