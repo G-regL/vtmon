@@ -268,8 +268,8 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Telegraf \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo '\"https://'$vcenters'/sdk\"' | sed 's~,~/sdk\", \"https://~g')\"}, 
-             {\"name\": \"VCUSERNAME\", \"value\": \"${vcuser}\"}, 
+    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo '\"https://'$vcenters'/sdk\"' | sed 's~,~/sdk\\\", \\\"https://~g')\"},
+             {\"name\": \"VCUSERNAME\", \"value\": \"${vcuser}\"},
              {\"name\": \"VCPASSWORD\", \"value\": \"${vcpassword}\"}
             ]" \
     -F file=@res/swarm/stacks/telegraf.yml 2&> /dev/null
