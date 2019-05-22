@@ -3,50 +3,50 @@
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
 echo "Setting up /dev/sdb as /var/lib/docker (vg01-docker)"
-parted -s /dev/sdb mkpart primary 0% 100%
-pvcreate /dev/sdb1
-vgcreate vg01 /dev/sdb1
-lvcreate vg01 -l 100%FREE -n docker /dev/sdb1
-mkfs.xfs /dev/mapper/vg01-docker
-mkdir /var/lib/docker
+parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
+pvcreate /dev/sdb1 >> /dev/null
+vgcreate vg01 /dev/sdb1 >> /dev/null
+lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
+mkfs.xfs /dev/mapper/vg01-docker >> /dev/null
+mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
 # Create the /opt mountpoint
 echo "Setting up /dev/sdc as /opt (vg02-opt)"
-parted -s /dev/sdc mkpart primary 0% 100%
-pvcreate /dev/sdc1
-vgcreate vg02 /dev/sdc1
-lvcreate vg02 -l 100%FREE -n opt /dev/sdc1
-mkfs.xfs /dev/mapper/vg02-opt
+parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
+pvcreate /dev/sdc1 >> /dev/null
+vgcreate vg02 /dev/sdc1 >> /dev/null
+lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
+mkfs.xfs /dev/mapper/vg02-opt >> /dev/null
 echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
 # Mount everything
 echo "Mounting all disks"
-mount -a
+mount -a >> /dev/null
 
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "Removing any old Docker packages"
-sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
 # Install some dependencies
 echo "Installing some needed packages"
-sudo yum install -y yum-utils device-mapper-persistent-data lvm2 jq
+sudo yum install -y yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
 # Add the official Docker repo
 echo "Adding the official Docker repo"
-sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >> /dev/null
 # Install Docker
 echo "Installing Docker"
-sudo yum install -y docker-ce docker-ce-cli containerd.io
+sudo yum install -y docker-ce docker-ce-cli containerd.io >> /dev/null
 
 # -------- Docker
 # Copy the Docker configs
 echo "Copy the Docker config files"
-cp -fr res/docker/ /etc/
+cp -fr res/docker/ /etc/ >> /dev/null
 # Enable, and Start Docker
 echo "Enable and start the Docker service"
-sudo systemctl enable docker
-sudo systemctl start docker
+sudo systemctl enable docker >> /dev/null
+sudo systemctl start docker >> /dev/null
 # Initialize the swarm
 echo "Initialize the Docker Swarm"
-docker swarm init
+docker swarm init >> /dev/null
 # Setup some networks
 echo "Creating some required networks"
 for net in traefik-net graphite-net elastic-net; do
@@ -234,26 +234,19 @@ for f in `ls res/grafana`; do
       -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' | jq -r '.id'`
 done
 echo "    Create dashboards"
-for file in `find res/grafana/ -name *.json`; do
-  folder=`echo $file |cut -d/ -f3 |cut -d- -f1`
-  dashboard=`echo $file |cut -d/ -f4 | cut -d -f1`
-  
-  jq "del(.dashboard.id) | .folderId = ${grafana_folders[$folder]} | .dashboard.meta.folderId = ${grafana_folders[$folder]}"
-  #sed -i "s/<<FOLDERID>>/${grafana_folders[$folder]}/g" $file
-  echo "      $dashboard"
-  curl -s http://${ipfqdn}/grafana/api/dashboards/db -X POST \
+find res/grafana/ -iname *.json | while read file; do
+  folder=`echo $file | cut -d/ -f3 | cut -d- -f1`
+  dash_name="`echo $file | cut -d/ -f4 | awk -F--- '{print $1}'`"
+  #dash_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
+  jq "del(.dashboard.id) | .folderId = ${grafana_folders[$folder]}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
+  echo "      $folder/$dash_name"
+  curl -s -o /dev/null  http://${ipfqdn}/grafana/api/dashboards/db -X POST \
       -u admin:$adminPass \
       -H "Accept: application/json" \
       -H "Content-Type: application/json" \
-      -d @$file
+      -d @"$file"
 done
 
-
-for file in `find res/grafana/ -name *.json`; do
-  folder=`echo $file |cut -d/ -f3 |cut -d- -f1`
-  dashboard=`echo $file |cut -d/ -f4 | cut -d. -f1`
-  echo "$folder (${grafana_folders[$folder]}) -- $dashboard"
-done
 
 #### Deploy Telegraf, using the Portainer API
 ###echo "Deploying Telegraf"
