@@ -96,7 +96,7 @@ until curl -s -o /dev/null http://${ipfqdn}:9000/api/status ; do
 done
 echo "done"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
-portAuthToken=`curl -s http://${ipfqdn}:9000/api/auth -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'`
+portAuthToken=`curl -s http://${ipfqdn}:9000/api/auth -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}' | jq '.jwt' -r`
 portEndpointID=`curl -s http://${ipfqdn}:9000/api/endpoints -H "Authorization: Bearer $portAuthToken" |jq '.[0].Id'`
 portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/1/docker/swarm -H "Authorization: Bearer $portAuthToken" |jq -r '.ID'`
 curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PUT \
@@ -268,8 +268,8 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Telegraf \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="{\"VCENTERS\": \"$(echo '"https://'$vcenters'/sdk"' | sed 's~,~/sdk", "https://~g')\", \
-             \"VCUSERNAME\": \"${vcuser}\", \ 
-             \"VCPASSWORD\": \"${vcpassword}\", \ 
-            }" \
+    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo '\"https://'$vcenters'/sdk\"' | sed 's~,~/sdk\", \"https://~g')\"}, 
+             {\"name\": \"VCUSERNAME\", \"value\": \"${vcuser}\"}, 
+             {\"name\": \"VCPASSWORD\", \"value\": \"${vcpassword}\"}
+            ]" \
     -F file=@res/swarm/stacks/telegraf.yml 2&> /dev/null

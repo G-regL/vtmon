@@ -114,7 +114,7 @@
 ## VM instance
 [[inputs.vsphere]]
   interval = "30s"
-  vcenters = [ "$VCENTERS" ]
+  vcenters = [ $VCENTERS ]
   username = "$VCUSERNAME"
   password = "$VCPASSWORD"
 
