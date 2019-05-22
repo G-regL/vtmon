@@ -90,10 +90,9 @@ done
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
 echo -n "  Waiting for services to come up."
-until curl -s -o /dev/null http://${ipfqdn}:9000/api/status 2&> /dev/null
- do
+until curl -s -o /dev/null http://${ipfqdn}:9000/api/status ; do
   echo -n "."
-  sleep 1
+  sleep 2
 done
 echo "done"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
@@ -113,8 +112,8 @@ for dir in "/opt/docker/stack.Traefik/service.traefik/logs"; do
   mkdir -p $dir >> /dev/null
 done
 configs=`ls res/swarm/configs/Traefik_*`
-echo "  Update config file with host info"
-sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/configs/Traefik_traefik-traefik.toml-*
+#echo "  Update config file with host info"
+#sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/configs/Traefik_traefik-traefik.toml-*
 echo "  Create Docker Swarm config files"
 for config in $configs; do
   f=`basename $config`
@@ -134,13 +133,13 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Traefik \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
+    -F Env="{\"HOSTIPFQDN\": \"${ipfqdn}\"}" \
     -F file=@res/swarm/stacks/traefik.yml 2&> /dev/null
 
 echo -n "  Waiting for services to come up."
-until curl -s -o /dev/null http://${ipfqdn}:8080/api
- do 
+until curl -s -o /dev/null http://${ipfqdn}:8080/api ; do 
   echo -n "."
-  sleep 1
+  sleep 2
 done
 echo "done"
 
@@ -193,8 +192,8 @@ for dir in /opt/docker/stack.grafana/service.grafana/data/; do # /opt/docker/sta
   mkdir -p $dir >> /dev/null
 done
 chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
-echo "  Update stack file with host info"
-sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/stacks/grafana.yml
+#echo "  Update stack file with host info"
+#sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/stacks/grafana.yml
 echo "  Pull Docker images"
 for image in grafana/grafana:latest; do
   echo "    $image"
@@ -203,34 +202,35 @@ done
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
-    -H "accept: application/json" \
+    -H "Accept: application/json" \
     -H "Content-Type: multipart/form-data" \
     -F Name=Grafana \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
+    -F Env="{\"HOSTIPFQDN\": \"${ipfqdn}\"}" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
+echo -n "  Waiting for services to come up."
+until curl -s -o /dev/null http://${ipfqdn}/grafana/login ; do 
+  echo -n "."
+  sleep 2
+done
+echo "done"
 # Set Grafana admin password
 echo "  Setting up Grafana"
 echo "    Change admin password"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/admin/users/1/password -X PUT \
-    -u admin:admin \
-    -H "Content-Type: application/json" \
-    -d '{"password":"'$adminPass'"}' 2&> /dev/null
+    -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}' 2&> /dev/null
 echo "    Create default datasource 'graphite'"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
-    -u admin:$adminPass \
-    -H "Accept: application/json" \
-    -H "Content-Type: application/json" \
-    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false,"isDefault": true}'  2&> /dev/null
+    -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
+    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'  2&> /dev/null
 echo "    Create folders"
 unset grafana_folders
 declare -A grafana_folders
 for f in `ls res/grafana`; do
   echo "      ${f%-*}"
   grafana_folders[${f%-*}]=`curl -s http://${ipfqdn}/grafana/api/folders -X POST \
-      -u admin:$adminPass \
-      -H "Accept: application/json" \
-      -H "Content-Type: application/json" \
+      -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
       -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' | jq -r '.id'`
 done
 echo "    Create dashboards"
@@ -241,24 +241,35 @@ find res/grafana/ -iname *.json | while read file; do
   jq "del(.dashboard.id) | .folderId = ${grafana_folders[$folder]}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
   echo "      $folder/$dash_name"
   curl -s -o /dev/null  http://${ipfqdn}/grafana/api/dashboards/db -X POST \
-      -u admin:$adminPass \
-      -H "Accept: application/json" \
-      -H "Content-Type: application/json" \
+      -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
       -d @"$file"
 done
 
 
-#### Deploy Telegraf, using the Portainer API
-###echo "Deploying Telegraf"
-###sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/configs/Traefik_traefik-traefik.toml-20190516.0747
-###docker config create Traefik_traefik-traefik.toml-20190516.0747 res/swarm/configs/Traefik_traefik-traefik.toml-20190516.0747 >> /dev/null
-###docker pull telegraf:1.10.0-alpine >> /dev/null
-###curl -v "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
-###    -H "Authorization: Bearer $portAuthToken" \
-###    -H "accept: application/json" \
-###    -H "Content-Type: multipart/form-data" \
-###    -F Name=Traefik \
-###    -F EndpointID=${portEndpointID} \
-###    -F SwarmID=${portSwarmID} \
-###    -F file=@res/swarm/stacks/traefik.yml
-
+# Deploy Telegraf, using the Portainer API
+echo "Deploying Telegraf"
+echo "  Create Docker Swarm config files"
+configs=`ls res/swarm/configs/Telegraf_*`
+for config in $configs; do
+  f=`basename $config`
+  echo "    $f"
+  docker config create $f $config >> /dev/null
+done
+echo "  Pull Docker images"
+for image in telegraf:1.10.0-alpine; do
+  echo "    $image"
+  docker pull $image >> /dev/null
+done
+echo " Deploy the stack"
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+    -H "Authorization: Bearer $portAuthToken" \
+    -H "Accept: application/json" \
+    -H "Content-Type: multipart/form-data" \
+    -F Name=Telegraf \
+    -F EndpointID=${portEndpointID} \
+    -F SwarmID=${portSwarmID} \
+    -F Env="{\"VCENTERS\": \"$(echo '"https://'$vcenters'/sdk"' | sed 's~,~/sdk", "https://~g')\", \
+             \"VCUSERNAME\": \"${vcuser}\", \ 
+             \"VCPASSWORD\": \"${vcpassword}\", \ 
+            }" \
+    -F file=@res/swarm/stacks/telegraf.yml 2&> /dev/null

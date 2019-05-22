@@ -14,7 +14,7 @@ services:
       - traefik-net
       - graphite-net
     environment:
-      - GF_SERVER_ROOT_URL=http://<<HOSTIPFQDN>>/grafana/
+      - GF_SERVER_ROOT_URL=http://${HOSTIPFQDN}/grafana/
       - GF_INSTALL_PLUGINS=yesoreyeram-boomtable-panel,petrslavotinek-carpetplot-panel,vonage-status-panel,flant-statusmap-panel
     deploy:
       mode: replicated
