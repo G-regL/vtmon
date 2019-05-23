@@ -1,5 +1,5 @@
 yum -y update
-yum -y install open-vm-tools unzip
+yum -y install open-vm-tools unzip epel-release
 systemctl start vmtoolsd
 curl -Lo vtmon.zip https://github.com/G-regL/vtmon/archive/master.zip
 unzip vtmon.zip

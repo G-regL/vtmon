@@ -3,6 +3,7 @@
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
 echo "Setting up /dev/sdb as /var/lib/docker (vg01-docker)"
+parted -s /dev/sdb mktable gpt >> /dev/null
 parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdb1 >> /dev/null
 vgcreate vg01 /dev/sdb1 >> /dev/null
@@ -12,6 +13,7 @@ mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
 # Create the /opt mountpoint
 echo "Setting up /dev/sdc as /opt (vg02-opt)"
+parted -s /dev/sdc mktable gpt >> /dev/null
 parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdc1 >> /dev/null
 vgcreate vg02 /dev/sdc1 >> /dev/null
@@ -25,16 +27,16 @@ mount -a >> /dev/null
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "Removing any old Docker packages"
-yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
+yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
 # Install some dependencies
 echo "Installing some needed packages"
-yum install -qy yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
+yum install -qy yum-utils device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
 # Add the official Docker repo
 echo "Adding the official Docker repo"
-yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >> /dev/null
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 2&> /dev/null
 # Install Docker
 echo "Installing Docker"
-yum install -qy docker-ce docker-ce-cli containerd.io >> /dev/null
+yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
 
 # -------- Docker
 # Copy the Docker configs
@@ -42,8 +44,8 @@ echo "Copy the Docker config files"
 cp -fr res/docker/ /etc/ >> /dev/null
 # Enable, and Start Docker
 echo "Enable and start the Docker service"
-systemctl enable docker >> /dev/null
-systemctl start docker >> /dev/null
+systemctl enable docker 2&> /dev/null
+systemctl start docker 2&> /dev/null
 # Initialize the swarm
 echo "Initialize the Docker Swarm"
 docker swarm init >> /dev/null
@@ -55,9 +57,9 @@ for net in traefik-net graphite-net elastic-net; do
 done
 
 while true; do
-    read -s -p "Enter new admin password: " password
+    read -s "Enter new admin password: " adminPass
     echo
-    read -s -p "Confirm new admin password: " password2
+    read -s "Confirm new admin password: " adminPass
     echo
     [ "$password" = "$password2" ] && break
     echo "Passwords didn't match, please try again"
@@ -67,9 +69,9 @@ read -p "IP or FQDN of this machine: " ipfqdn
 read -p "vCenter addresses, comma-separated: " vcenters
 read -p "vCenter user: " vcuser
 while true; do
-    read -s -p "Enter vCenter password: " vcpassword
+    read -s "Enter vCenter password: " vcpassword
     echo
-    read -s -p "Confirm vCenter password: " vcpassword2
+    read -s "Confirm vCenter password: " vcpassword2
     echo
     [ "$vcpassword" = "$vcpassword2" ] && break
     echo "Passwords didn't match, please try again"
