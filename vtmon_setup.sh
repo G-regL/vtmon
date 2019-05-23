@@ -1,8 +1,13 @@
 #!/bin/bash
 
+
+CHECK="[$(tput setaf 2)✓$(tput setaf 7)]"
+CROSS="[$(tput setaf 1)✗$(tput setaf 7)]"
+
+if false; then
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
-echo "Setting up /dev/sdb as /var/lib/docker (vg01-docker)"
+echo -n "Setting up /dev/sdb as /var/lib/docker (vg01-docker)"
 parted -s /dev/sdb mktable gpt >> /dev/null
 parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdb1 >> /dev/null
@@ -11,8 +16,9 @@ lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
 mkfs.xfs -fq /dev/mapper/vg01-docker >> /dev/null
 mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
+echo " "${CHECK}
 # Create the /opt mountpoint
-echo "Setting up /dev/sdc as /opt (vg02-opt)"
+echo -n "Setting up /dev/sdc as /opt (vg02-opt)"
 parted -s /dev/sdc mktable gpt >> /dev/null
 parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
 pvcreate /dev/sdc1 >> /dev/null
@@ -20,48 +26,62 @@ vgcreate vg02 /dev/sdc1 >> /dev/null
 lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
 mkfs.xfs -fq /dev/mapper/vg02-opt >> /dev/null
 echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
+echo " "${CHECK}
+
 # Mount everything
 echo "Mounting all disks"
 mount -a >> /dev/null
+fi
 
 # -------- Packages
 # Remove any version of Docker if it's there
-echo "Removing any old Docker packages"
+echo -n "Removing any old Docker packages"
 yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
+echo " "${CHECK}
 # Install some dependencies
-echo "Installing some needed packages"
+echo -n "Installing some needed packages"
 yum install -qy yum-utils device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
+echo " "${CHECK}
 # Add the official Docker repo
-echo "Adding the official Docker repo"
+echo -n "Adding the official Docker repo"
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 2&> /dev/null
+echo " "${CHECK}
 # Install Docker
-echo "Installing Docker"
+echo -n "Installing Docker"
 yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
+echo " "${CHECK}
 
 # -------- Docker
 # Copy the Docker configs
-echo "Copy the Docker config files"
+echo -n "Copy the Docker config files"
 cp -fr res/docker/ /etc/ >> /dev/null
+echo " "${CHECK}
+
 # Enable, and Start Docker
-echo "Enable and start the Docker service"
+echo -n "Enable and start the Docker service"
 systemctl enable docker 2&> /dev/null
 systemctl start docker 2&> /dev/null
+echo " "${CHECK}
+
 # Initialize the swarm
-echo "Initialize the Docker Swarm"
+echo -n "Initialize the Docker Swarm"
 docker swarm init >> /dev/null
+echo " "${CHECK}
+
 # Setup some networks
 echo "Creating some required networks"
 for net in traefik-net graphite-net elastic-net; do
-  echo "  $net"
+  echo -n "  $net"
   docker network create --driver overlay --attachable $net >> /dev/null
+  echo " "${CHECK}
 done
 
 while true; do
-    read -s "Enter new admin password: " adminPass
-    echo
-    read -s "Confirm new admin password: " adminPass
-    echo
-    [ "$password" = "$password2" ] && break
+    read -p "Enter new admin password: " adminPass
+#    echo
+    read -p "Confirm new admin password: " adminPass2
+#    echo
+    [ "$adminPass" = "$adminPass2" ] && break
     echo "Passwords didn't match, please try again"
 done
 #read -sp "Set admin password: " adminPass
@@ -69,10 +89,10 @@ read -p "IP or FQDN of this machine: " ipfqdn
 read -p "vCenter addresses, comma-separated: " vcenters
 read -p "vCenter user: " vcuser
 while true; do
-    read -s "Enter vCenter password: " vcpassword
-    echo
-    read -s "Confirm vCenter password: " vcpassword2
-    echo
+    read -p "Enter vCenter password: " vcpassword
+#    echo
+    read -p "Confirm vCenter password: " vcpassword2
+#    echo
     [ "$vcpassword" = "$vcpassword2" ] && break
     echo "Passwords didn't match, please try again"
 done
@@ -81,22 +101,27 @@ done
 echo "Deploying Portainer"
 echo "  Make persistent storage"
 for dir in "/opt/docker/stack.Portainer/service.portainer"; do
-  echo "    $dir"
+  echo -n "    $dir"
   mkdir -p $dir >> /dev/null
+  echo " "${CHECK}
 done
 echo "  Pull Docker images"
 for image in `cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-  echo "    $image"
+  echo -n "    $image"
   docker pull $image >> /dev/null
+  echo " "${CHECK}
 done
-echo " Deploy the stack"
+echo "  Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
-echo -n "   Waiting for services to come up."
+echo -n "    Waiting for services to come up."
 until curl -s -o /dev/null http://${ipfqdn}:9000/api/status ; do
   echo -n "."
   sleep 2
 done
 echo "done"
+echo "  Setting up Portainer"
+echo -n "    Change admin password"
+sleep 4
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
 portAuthToken=`curl -s http://${ipfqdn}:9000/api/auth -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}' | jq '.jwt' -r`
 portEndpointID=`curl -s http://${ipfqdn}:9000/api/endpoints -H "Authorization: Bearer $portAuthToken" |jq '.[0].Id'`
@@ -104,14 +129,19 @@ portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/1/docker/swarm -H "Auth
 curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PUT \
     -H "Authorization: Bearer $portAuthToken" \
     -d '{"Name": "VTMon", "PublicURL": "'${ipfqdn}'"}'
+echo " "${CHECK}
+echo "  DONE"
+read -p "Hit ENTER to continue"
+
 
 
 # Deploy Traefik, using the Portainer API
 echo "Deploying Traefik"
 echo "  Make persistent storage"
 for dir in "/opt/docker/stack.Traefik/service.traefik/logs"; do
-  echo "    $dir"
+  echo -n "    $dir"
   mkdir -p $dir >> /dev/null
+  echo " "${CHECK}
 done
 configs=`ls res/swarm/configs/Traefik_*`
 #echo "  Update config file with host info"
@@ -119,15 +149,17 @@ configs=`ls res/swarm/configs/Traefik_*`
 echo "  Create Docker Swarm config files"
 for config in $configs; do
   f=`basename $config`
-  echo "    $f"
+  echo -n "    $f"
   docker config create $f $config >> /dev/null
+  echo " "${CHECK}
 done
 echo "  Pull Docker images"
 for image in `cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-  echo "    $image"
+  echo -n "    $image"
   docker pull $image >> /dev/null
+  echo " "${CHECK}
 done
-echo " Deploy the stack"
+echo "  Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
     -H "accept: application/json" \
@@ -135,30 +167,35 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Traefik \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}" \
-    -F file=@res/swarm/stacks/traefik.yml 2&> /dev/null
+    -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
+    -F file=@res/swarm/stacks/traefik.yml
 
-echo -n "   Waiting for services to come up."
-until curl -s -o /dev/null http://${ipfqdn}:8080/api ; do 
+echo -n "    Waiting for services to come up."
+until curl -s -o /dev/null http://${ipfqdn}:8080/api ; do
   echo -n "."
   sleep 2
 done
-echo "done"
+echo "  DONE"
+
+read -p "Hit ENTER to continue"
+
+
 
 # Deploy Graphite, using the Portainer API
 echo "Deploying Graphite"
 echo "  Make persistent storage"
 for dir in /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/; do
-  echo "    $dir"
+  echo -n "    $dir"
   mkdir -p $dir >> /dev/null
+  echo " "${CHECK}
 done
 chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### Set some system options to optimize it for Graphite
 ##echo "  Tuning host system"
-### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS 
+### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS
 ### block size (4KB) per metric.
 ##sysctl -w vm.dirty_ratio=80
-### percentage of yout RAM when background writer have to kick in and start writes to disk. Make it way above the value 
+### percentage of yout RAM when background writer have to kick in and start writes to disk. Make it way above the value
 ### you see in `/proc/meminfo|grep Dirty` so that it doesn't interefere with dirty_expire_centisecs explained below
 ##sysctl -w vm.dirty_background_ratio=50
 ### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
@@ -166,13 +203,15 @@ chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 echo "  Create Docker Swarm config files"
 for config in `ls res/swarm/configs/Graphite_*`; do
   f=`basename $config`
-  echo "    $f"
+  echo -n "    $f"
   docker config create $f $config >> /dev/null
+  echo " "${CHECK}
 done
 echo "  Pull Docker images"
 for image in `cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-  echo "    $image"
+  echo -n "    $image"
   docker pull $image >> /dev/null
+  echo " "${CHECK}
 done
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -182,7 +221,9 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
     -F file=@res/swarm/stacks/graphite.yml 2&> /dev/null
+echo "  DONE ${CHECK}"
 
+read -p "Hit ENTER to continue"
 
 
 
@@ -190,16 +231,18 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 echo "Deploying Grafana"
 echo "  Make persistent storage"
 for dir in /opt/docker/stack.grafana/service.grafana/data/; do # /opt/docker/stack.grafana/service.grafana/provisioning
-  echo "    $dir"
+  echo -n "    $dir"
   mkdir -p $dir >> /dev/null
+  echo " "${CHECK}
 done
 chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 #echo "  Update stack file with host info"
 #sed -i "s/<<HOSTIPFQDN>>/$ipfqdn/g" res/swarm/stacks/grafana.yml
 echo "  Pull Docker images"
 for image in `cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-  echo "    $image"
+  echo -n "    $image"
   docker pull $image >> /dev/null
+  echo " "${CHECK}
 done
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -209,43 +252,53 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Grafana \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}" \
+    -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
 echo -n "  Waiting for services to come up."
-until curl -s -o /dev/null http://${ipfqdn}/grafana/login ; do 
+until curl http://${ipfqdn}:8080/api  -s| jq '.docker.backends."backend-Grafana-grafana"' -e > /dev/null ; do
   echo -n "."
   sleep 2
 done
-echo "done"
+echo "done ${CHECK}"
 # Set Grafana admin password
 echo "  Setting up Grafana"
-echo "    Change admin password"
+echo -n "    Change admin password"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/admin/users/1/password -X PUT \
-    -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}' 2&> /dev/null
-echo "    Create default datasource 'graphite'"
+    -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}'
+echo " "${CHECK}
+# Create the default datasource
+echo -n "    Create default datasource 'graphite'"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
     -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
-    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'  2&> /dev/null
+    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'
+echo " "${CHECK}
+# Create Grafana dashboards from the files inside res/grafana/*/*
 echo "    Create folders"
-unset grafana_folders
-declare -A grafana_folders
 for f in `ls res/grafana`; do
-  echo "      ${f%-*}"
-  grafana_folders[${f%-*}]=`curl -s http://${ipfqdn}/grafana/api/folders -X POST \
+  f_name=${f%-*}
+  f_uid=${f#*-}
+  echo -n "      ${f_name}"
+  curl -s -o /dev/null http://${ipfqdn}/grafana/api/folders -X POST \
       -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
-      -d '{ "uid": "'${f#*-}'", "title":"'${f%-*}'"}' | jq -r '.id'`
+      -d '{ "uid": "'${f_uid}'", "title":"'${f_name}'"}'
+  echo " "${CHECK}
 done
 echo "    Create dashboards"
 find res/grafana/ -iname *.json | while read file; do
-  folder=`echo $file | cut -d/ -f3 | cut -d- -f1`
-  dash_name="`echo $file | cut -d/ -f4 | awk -F--- '{print $1}'`"
-  #dash_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
-  jq "del(.dashboard.id) | .folderId = ${grafana_folders[$folder]}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
-  echo "      $folder/$dash_name"
+  dashboard_name="`echo $file | cut -d/ -f4 | awk -F--- '{print $1}'`"
+  echo -n "      $folder_name/$dashboard_name"
+  folder_name=`echo $file | cut -d/ -f3 | cut -d- -f1`
+  folder_uid=`echo $file | cut -d/ -f3 | cut -d- -f2`
+  folder_id=`curl -s "http://${ipfqdn}/grafana/api/folders/${folder_uid}" |jq '.id'`
+#  dashboard_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
+  jq "del(.dashboard.id) | .folderId = ${folder_id}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
   curl -s -o /dev/null  http://${ipfqdn}/grafana/api/dashboards/db -X POST \
       -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
       -d @"$file"
+  echo " "${CHECK}
 done
+echo "  DONE ${CHECK}"
+read -p "Hit ENTER to continue"
 
 
 # Deploy Telegraf, using the Portainer API
@@ -254,13 +307,15 @@ echo "  Create Docker Swarm config files"
 configs=`ls res/swarm/configs/Telegraf_*`
 for config in $configs; do
   f=`basename $config`
-  echo "    $f"
+  echo -n "    $f"
   docker config create $f $config >> /dev/null
+  echo " "${CHECK}
 done
 echo "  Pull Docker images"
 for image in `cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-  echo "    $image"
+  echo -n "    $image"
   docker pull $image >> /dev/null
+  echo " "${CHECK}
 done
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -275,4 +330,5 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
              {\"name\": \"VCPASSWORD\", \"value\": \"${vcpassword}\"}
             ]" \
     -F file=@res/swarm/stacks/telegraf.yml 2&> /dev/null
+echo "  DONE ${CHECK}"
 #-F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo '\"https://'$vcenters'/sdk\"' | sed 's~,~/sdk\\\", \\\"https://~g')\"},
