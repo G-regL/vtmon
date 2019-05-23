@@ -25,16 +25,16 @@ mount -a >> /dev/null
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "Removing any old Docker packages"
-yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
+yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine >> /dev/null
 # Install some dependencies
 echo "Installing some needed packages"
-yum install -y yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
+yum install -qy yum-utils device-mapper-persistent-data lvm2 jq >> /dev/null
 # Add the official Docker repo
 echo "Adding the official Docker repo"
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo >> /dev/null
 # Install Docker
 echo "Installing Docker"
-yum install -y docker-ce docker-ce-cli containerd.io >> /dev/null
+yum install -qy docker-ce docker-ce-cli containerd.io >> /dev/null
 
 # -------- Docker
 # Copy the Docker configs
@@ -60,7 +60,7 @@ while true; do
     read -s -p "Confirm new admin password: " password2
     echo
     [ "$password" = "$password2" ] && break
-    echo "Please try again"
+    echo "Passwords didn't match, please try again"
 done
 #read -sp "Set admin password: " adminPass
 read -p "IP or FQDN of this machine: " ipfqdn
@@ -72,7 +72,7 @@ while true; do
     read -s -p "Confirm vCenter password: " vcpassword2
     echo
     [ "$vcpassword" = "$vcpassword2" ] && break
-    echo "Please try again"
+    echo "Passwords didn't match, please try again"
 done
 
 # Deploy Portainer, using the command-line
@@ -89,7 +89,7 @@ for image in `cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $
 done
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
-echo -n "  Waiting for services to come up."
+echo -n "   Waiting for services to come up."
 until curl -s -o /dev/null http://${ipfqdn}:9000/api/status ; do
   echo -n "."
   sleep 2
@@ -133,10 +133,10 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Traefik \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="{\"HOSTIPFQDN\": \"${ipfqdn}\"}" \
+    -F Env="{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}" \
     -F file=@res/swarm/stacks/traefik.yml 2&> /dev/null
 
-echo -n "  Waiting for services to come up."
+echo -n "   Waiting for services to come up."
 until curl -s -o /dev/null http://${ipfqdn}:8080/api ; do 
   echo -n "."
   sleep 2
@@ -207,7 +207,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Grafana \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="{\"HOSTIPFQDN\": \"${ipfqdn}\"}" \
+    -F Env="{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
 echo -n "  Waiting for services to come up."
 until curl -s -o /dev/null http://${ipfqdn}/grafana/login ; do 
