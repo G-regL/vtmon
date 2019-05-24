@@ -19,13 +19,13 @@ while true; do
     [ "$adminPass" = "$adminPass2" ] && break
     echo "ERROR: Passwords didn't match, please try again"
 done
-unset $adminPass2
+unset adminPass2
 echo "We need to know the IP or FQDN of this system, so that we can properly setup"
 echo " some components."
-disc_ifqdn=`if [ $(hostname -s) != "localhost" ]; then hostname; else ip route | grep -v default | grep -v docker | cut -d\   -f9; fi`
+disc_ipfqdn=`if [ $(hostname -s) != "localhost" ]; then hostname; else ip route | grep -v default | grep -v docker | cut -d\   -f9; fi`
 read -p " IP or FQDN of this machine [$disc_ipfqdn]: " ipfqdn
 ipfqdn=${ipfqdn:-$disc_ipfqdn}
-unset $disc_ifqdn
+unset disc_ipfqdn
 
 echo "We need to know the FQDNs of the vCenters you want to monitor."
 echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.example.org'"
@@ -44,9 +44,10 @@ while true; do
     [ "$vcpassword" = "$vcpassword2" ] && break
     echo "ERROR: Passwords didn't match, please try again"
 done
-unset $vcpassword2
+unset vcpassword2
 
 echo "We've got everything we need to setup, so sit back and watch things happen!"
+read -p " Hit ENTER to continue"
 
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
