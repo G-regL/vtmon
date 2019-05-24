@@ -9,7 +9,7 @@ echo
 echo "We need to gather some details for the depoyment before proceeding"
 echo 
 echo "Portainer and Grafana both need to have an admin user account created"
-echo " and we'll need to know what password you want to use."
+echo "and we'll need to know what password you want to use."
 # Gather some details for the deployment
 while true; do
     read -p " Admin user password: " adminPass
@@ -21,7 +21,7 @@ while true; do
 done
 unset adminPass2
 echo "We need to know the IP or FQDN of this system, so that we can properly setup"
-echo " some components."
+echo "some components."
 disc_ipfqdn=`if [ $(hostname -s) != "localhost" ]; then hostname; else ip route | grep -v default | grep -v docker | cut -d\   -f9; fi`
 read -p " IP or FQDN of this machine [$disc_ipfqdn]: " ipfqdn
 ipfqdn=${ipfqdn:-$disc_ipfqdn}
@@ -32,9 +32,9 @@ echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.exa
 read -p " vCenter addresses: "
 vcenters=$(echo 'https://'$REPLY'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')
 echo "Please enter a username, and password, which we'll use to connect to each vCenter "
-echo " above in order to gather the metrics. It should have the 'Read-only' role granted "
-echo " to it at the root of the vCenter."
-echo " It's recommended to use an SSO account, for ease of management"
+echo "above in order to gather the metrics. It should have the 'Read-only' role granted "
+echo "to it at the root of the vCenter."
+echo "It's recommended to use an SSO account, for ease of management"
 read -p " vCenter user: " vcuser
 while true; do
     read -p " vCenter user password: " vcpassword
@@ -176,30 +176,30 @@ tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
 
 echo "       Set up Portainer"
 # Change admin password
-echo "         Change admin password"
+echo "         Set admin password"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
-echo " ${CHECK}   Change admin password"
+tput cuu1; echo " ${CHECK}     Set admin password"
 
 # Generate new admin auth token
 echo "         Generate admin auth token"
 portAuthToken=`curl -s http://${ipfqdn}:9000/api/auth -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}' | jq '.jwt' -r`
-echo " ${CHECK}   Generate admin auth token"
+tput cuu1; echo " ${CHECK}     Generate admin auth token"
 
 # Gather some endpoint details
 echo "         Gather endpoint details"
 portEndpointID=`curl -s http://${ipfqdn}:9000/api/endpoints -H "Authorization: Bearer $portAuthToken" |jq '.[0].Id'`
 portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/1/docker/swarm -H "Authorization: Bearer $portAuthToken" |jq -r '.ID'`
-echo " ${CHECK}   Gather endpoint details"
+tput cuu1; echo " ${CHECK}     Gather endpoint details"
 
 # Set the endpoint name
 echo "         Set Endpoint name"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PUT \
     -H "Authorization: Bearer $portAuthToken" \
     -d '{"Name": "VTMon", "PublicURL": "'${ipfqdn}'"}'
-echo " ${CHECK}   Set Endpoint name"
+tput cuu1; echo " ${CHECK}     Set Endpoint name"
 echo "     DONE"
 read -p "     Hit ENTER to continue"
-
+echo
 
 
 # Deploy Traefik, using the Portainer API
@@ -249,7 +249,7 @@ tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
 
 echo "     DONE"
 read -p "     Hit ENTER to continue"
-
+echo
 
 
 # Deploy Graphite, using the Portainer API
@@ -271,7 +271,6 @@ chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ##sysctl -w vm.dirty_background_ratio=50
 ### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
 ##sysctl -w vm.dirty_expire_centisecs=$(( 10*60*100 ))
-echo "       Create Docker Swarm config files"
 echo "       Create Docker Swarm config files"
 for config in `ls res/swarm/configs/Graphite_*`; do
   f=`basename $config`
@@ -298,7 +297,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 tput cuu1; echo " ${CHECK}   Deploy the stack"
 echo "     DONE"
 read -p "     Hit ENTER to continue"
-
+echo
 
 
 # Deploy Grafana, using the Portainer API
@@ -341,10 +340,10 @@ tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
 
 # Set Grafana admin password
 echo "       Set up Grafana"
-echo "         Change admin password"
+echo "         Set admin password"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/admin/users/1/password -X PUT \
     -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}'
-tput cuu1; echo " ${CHECK}     Change admin password"
+tput cuu1; echo " ${CHECK}     Set admin password"
 
 # Create the default datasource
 echo "         Create default datasource 'graphite'"
@@ -354,7 +353,7 @@ curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
 tput cuu1; echo " ${CHECK}     Create default datasource 'graphite'"
 
 # Create Grafana dashboards from the files inside res/grafana/*/*
-echo "         Create folders"
+echo "         Create dashboard folders"
 for f in `ls res/grafana`; do
   f_name=${f%-*}
   f_uid=${f#*-}
@@ -370,7 +369,7 @@ find res/grafana/ -iname *.json | while read file; do
   folder_name=`echo $file | cut -d/ -f3 | cut -d- -f1`
   echo "           $folder_name/$dashboard_name"
   folder_uid=`echo $file | cut -d/ -f3 | cut -d- -f2`
-  folder_id=`curl -s "http://${ipfqdn}/grafana/api/folders/${folder_uid}" |jq '.id'`
+  folder_id=`curl -s -u admin:$adminPass "http://${ipfqdn}/grafana/api/folders/${folder_uid}" |jq '.id'`
 #  dashboard_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
   jq "del(.dashboard.id) | .folderId = ${folder_id}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
   curl -s -o /dev/null  http://${ipfqdn}/grafana/api/dashboards/db -X POST \
@@ -380,7 +379,7 @@ find res/grafana/ -iname *.json | while read file; do
 done
 echo "     DONE"
 read -p "     Hit ENTER to continue"
-
+echo
 
 # Deploy Telegraf, using the Portainer API
 echo "     Deploy Telegraf"
