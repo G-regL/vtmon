@@ -1,99 +1,149 @@
 #!/bin/bash
 
-
 CHECK="[$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
+
+echo "+-------------------------------------------------------------------+"
+echo "+           Setup Virtualization Technologies Monitoring            +"
+echo "+-------------------------------------------------------------------+"
+echo
+echo "We need to gather some details for the depoyment before proceeding"
+echo 
+echo "Portainer and Grafana both need to have an admin user account created"
+echo " and we'll need to know what password you want to use."
+# Gather some details for the deployment
+while true; do
+    read -p " Admin user password: " adminPass
+#    echo
+    read -p " Confirm password: " adminPass2
+#    echo
+    [ "$adminPass" = "$adminPass2" ] && break
+    echo "ERROR: Passwords didn't match, please try again"
+done
+unset $adminPass2
+echo "We need to know the IP or FQDN of this system, so that we can properly setup"
+echo " some components."
+disc_ifqdn=`if [ $(hostname -s) != "localhost" ]; then hostname; else ip route | grep -v default | grep -v docker | cut -d\   -f9; fi`
+read -p " IP or FQDN of this machine [$disc_ipfqdn]: " ipfqdn
+ipfqdn=${ipfqdn:-$disc_ipfqdn}
+unset $disc_ifqdn
+
+echo "We need to know the FQDNs of the vCenters you want to monitor."
+echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.example.org'"
+read -p " vCenter addresses: "
+vcenters=$(echo 'https://'$REPLY'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')
+echo "Please enter a username, and password, which we'll use to connect to each vCenter "
+echo " above in order to gather the metrics. It should have the 'Read-only' role granted "
+echo " to it at the root of the vCenter."
+echo " It's recommended to use an SSO account, for ease of management"
+read -p " vCenter user: " vcuser
+while true; do
+    read -p " vCenter user password: " vcpassword
+#    echo
+    read -p " Confirm password: " vcpassword2
+#    echo
+    [ "$vcpassword" = "$vcpassword2" ] && break
+    echo "ERROR: Passwords didn't match, please try again"
+done
+unset $vcpassword2
+
+echo "We've got everything we need to setup, so sit back and watch things happen!"
 
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
 echo "     Set up /dev/sdb as /var/lib/docker (vg01-docker)"
+echo "       Create partition"
 parted -s /dev/sdb mktable gpt >> /dev/null
 parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
+tput cuu1; echo " ${CHECK}   Create partition"
+
+
+echo "       Create PhysicalVolume, VolumeGroup and LogicalVolume"
 pvcreate /dev/sdb1 >> /dev/null
 vgcreate vg01 /dev/sdb1 >> /dev/null
 lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
+tput cuu1; echo " ${CHECK}   Create PhysicalVolume, VolumeGroup and LogicalVolume"
+
+echo "       Make filesystem"
 mkfs.xfs -fq /dev/mapper/vg01-docker >> /dev/null
+tput cuu1; echo " ${CHECK}   Make filesystem"
+
+echo "       Add fstab entry"
 mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
-tput cuu1; echo " {CHECK} Set up /dev/sdb as /var/lib/docker (vg01-docker)"
+tput cuu1; echo " ${CHECK}   "
+
 
 # Create the /opt mountpoint
 echo "     Set up /dev/sdc as /opt (vg02-opt)"
+echo "       Create partition"
 parted -s /dev/sdc mktable gpt >> /dev/null
 parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
+tput cuu1; echo " ${CHECK}   Create partition"
+
+echo "       Create PhysicalVolume, VolumeGroup and LogicalVolume"
 pvcreate /dev/sdc1 >> /dev/null
 vgcreate vg02 /dev/sdc1 >> /dev/null
 lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
+tput cuu1; echo " ${CHECK}   Create PhysicalVolume, VolumeGroup and LogicalVolume"
+
+echo "       Make filesystem"
 mkfs.xfs -fq /dev/mapper/vg02-opt >> /dev/null
+tput cuu1; echo " ${CHECK}   Make filesystem"
+
+echo "       Add fstab entry"
 echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK}   Add fstab entry"
+
 
 # Mount everything
 echo "     Mount all disks"
 mount -a >> /dev/null
+tput cuu1; echo " ${CHECK} Mount all disks"
+
 
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "     Remove old Docker packages"
 yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Remove old Docker packages"
 # Install some dependencies
 echo "     Install some needed packages"
 yum install -qy yum-utils device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Install some needed packages"
 # Add the official Docker repo
 echo "     Add the official Docker repo"
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 2&> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Add the official Docker repo"
 # Install Docker
 echo "     Install Docker"
 yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Install Docker"
 
 # -------- Docker
 # Copy the Docker configs
 echo "     Copy the Docker config files"
 cp -fr res/docker/ /etc/ >> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Copy the Docker config files"
 
 # Enable, and Start Docker
 echo "     Enable and start the Docker service"
 systemctl enable docker 2&> /dev/null
 systemctl start docker 2&> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Enable and start the Docker service"
 
 # Initialize the swarm
 echo "     Initialize the Docker Swarm"
 docker swarm init >> /dev/null
-echo " "${CHECK}
+tput cuu1; echo " ${CHECK} Initialize the Docker Swarm"
 
 # Setup some networks
 echo "     Create networks"
 for net in traefik-net graphite-net elastic-net; do
-  echo -n "  $net"
+  echo "          $net"
   docker network create --driver overlay --attachable $net >> /dev/null
-  echo " "${CHECK}
+  tput cuu1; echo "      ${CHECK} $net"
 done
 
-while true; do
-    read -p "     Enter new admin password: " adminPass
-#    echo
-    read -p "     Confirm new admin password: " adminPass2
-#    echo
-    [ "$adminPass" = "$adminPass2" ] && break
-    echo "     Passwords didn't match, please try again"
-done
-#read -sp "Set admin password: " adminPass
-read -p "     IP or FQDN of this machine: " ipfqdn
-read -p "     vCenter addresses, comma-separated: " vcenters
-read -p "     vCenter user: " vcuser
-while true; do
-    read -p "     Enter vCenter password: " vcpassword
-#    echo
-    read -p "     Confirm vCenter password: " vcpassword2
-#    echo
-    [ "$vcpassword" = "$vcpassword2" ] && break
-    echo "     Passwords didn't match, please try again"
-done
 
 # Deploy Portainer, using the command-line
 echo "     Deploy Portainer"
@@ -356,7 +406,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=Telegraf \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo 'https://'$vcenters'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')\"},
+    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"${vcenters}\"},
              {\"name\": \"VCUSERNAME\", \"value\": \"${vcuser}\"},
              {\"name\": \"VCPASSWORD\", \"value\": \"${vcpassword}\"}
             ]" \
@@ -364,10 +414,13 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 tput cuu1; echo " ${CHECK}   Deploy the stack"
 echo "     DONE"
 #    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"https://$vcenters/sdk\"},
-
 #    -F Env="[{\"name\": \"VCENTERS\", \"value\": \"$(echo 'https://'$vcenters'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')\"},
 
 echo
-echo "VTMon is now deployed and ready to go."
+echo "VTMon is now deployed and ready to go!"
+echo
 echo "You can visit Grafana at http://${ipfqdn}/grafana/, and login with admin:${adminPass}."
-echo ""
+echo "Should you want/need to check on the status of the system, you can use the following URLs"
+echo "  Portainer (Container manager) - http://${ipfqdn}/poratiner/"
+echo "  Traefik (Load balancer)       - http://${ipfqdn}:8080/dashboard/"
+echo
