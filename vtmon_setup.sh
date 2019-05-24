@@ -93,6 +93,8 @@ echo "We need to know the FQDNs of the vCenters you want to monitor."
 echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.example.org'"
 read -p " vCenter addresses: "
 vcenters=$(echo 'https://'$REPLY'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')
+echo
+
 echo "Please enter a username, and password, which we'll use to connect to each vCenter "
 echo "above in order to gather the metrics. It should have the 'Read-only' role granted "
 echo "to it at the root of the vCenter."
@@ -115,17 +117,17 @@ read -p " Hit ENTER to continue"
 echo
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
-echo "     Set up /dev/sdb as /var/lib/docker (vg01-docker)"
-echo "       Create partition"
+echo " Set up /dev/sdb as /var/lib/docker (vg01-docker)"
+echo "     Create partition"
 parted -s /dev/sdb mktable gpt >> /dev/null
 parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
 tput cuu1; echo " ${CHECK}   Create partition"
 
-echo "       Create PhysicalVolume, VolumeGroup and LogicalVolume"
+echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
 pvcreate /dev/sdb1 >> /dev/null
 vgcreate vg01 /dev/sdb1 >> /dev/null
 lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
-tput cuu1; echo " ${CHECK}   Create PhysicalVolume, VolumeGroup and LogicalVolume"
+tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
 
 make_filesystem "/dev/mapper/vg01-docker"
 ###echo "       Make filesystem [  "
@@ -140,24 +142,28 @@ make_filesystem "/dev/mapper/vg01-docker"
 ###echo
 ###tput cuu1; echo " ${CHECK}   Make filesystem    "
 
-echo "       Add fstab entry"
+echo "     Add fstab entry"
 mkdir /var/lib/docker >> /dev/null
 echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
-tput cuu1; echo " ${CHECK}   "
+tput cuu1; echo " ${CHECK} Add fstab entry"
+
+echo "     Mount filesystem"
+mount -a >> /dev/null
+tput cuu1; echo " ${CHECK} Mount filesystem"
 echo
 
 # Create the /opt mountpoint
-echo "     Set up /dev/sdc as /opt (vg02-opt)"
-echo "       Create partition"
+echo " Set up /dev/sdc as /opt (vg02-opt)"
+echo "     Create partition"
 parted -s /dev/sdc mktable gpt >> /dev/null
 parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
 tput cuu1; echo " ${CHECK}   Create partition"
 
-echo "       Create PhysicalVolume, VolumeGroup and LogicalVolume"
+echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
 pvcreate /dev/sdc1 >> /dev/null
 vgcreate vg02 /dev/sdc1 >> /dev/null
 lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
-tput cuu1; echo " ${CHECK}   Create PhysicalVolume, VolumeGroup and LogicalVolume"
+tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
 
 make_filesystem "/dev/mapper/vg02-opt"
 ###echo "       Make filesystem [  "
@@ -172,17 +178,18 @@ make_filesystem "/dev/mapper/vg02-opt"
 ###echo
 ###tput cuu1; echo " ${CHECK}   Make filesystem    "
 
-echo "       Add fstab entry"
+echo "     Add fstab entry"
 echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
-tput cuu1; echo " ${CHECK}   Add fstab entry"
+tput cuu1; echo " ${CHECK} Add fstab entry"
+
+echo "     Mount filesystem"
+mount -a >> /dev/null
+tput cuu1; echo " ${CHECK} Mount filesystem"
 echo
 
-# Mount everything
-echo "     Mount all disks"
-mount -a >> /dev/null
-tput cuu1; echo " ${CHECK} Mount all disks"
 
 
+echo " Install/remove packages"
 # -------- Packages
 # Remove any version of Docker if it's there
 echo "     Remove old Docker packages"
@@ -200,7 +207,9 @@ tput cuu1; echo " ${CHECK} Add the official Docker repo"
 echo "     Install Docker"
 yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
 tput cuu1; echo " ${CHECK} Install Docker"
+echo
 
+echo " Setup Docker Swarm"
 # -------- Docker
 # Copy the Docker configs
 echo "     Copy the Docker config files"
@@ -223,7 +232,7 @@ echo "     Create networks"
 for net in traefik-net graphite-net elastic-net; do
   echo "          $net"
   docker network create --driver overlay --attachable $net >> /dev/null
-  tput cuu1; echo "      ${CHECK} $net"
+  tput cuu1; echo " ${CHECK}      $net"
 done
 read -p "     Hit ENTER to continue"
 echo
