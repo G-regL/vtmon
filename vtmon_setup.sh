@@ -48,7 +48,7 @@ function wait_for_service () {
 }
 
 make_filesystem () {
-  echo "       Make filesystem [  "
+  echo -n "       Make filesystem [  "
   mkfs.xfs -fq $1 > /dev/null &
   PID=$!
   c=1
@@ -233,7 +233,7 @@ make_persistant_storage "/opt/docker/stack.Portainer/service.portainer"
 ###  tput cuu1; echo " ${CHECK}     $dir"
 ###done
 echo "       Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images "$(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)"
 ###images=`cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq`
 ###for i in $images; do
 ###  echo -n "         $i [  "
@@ -310,7 +310,7 @@ create_swarm_configs $(ls res/swarm/configs/Traefik_*)
 ###  tput cuu1; echo " ${CHECK}     $f"
 ###done
 echo "       Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images "$(cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq)"
 ###images=`cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq`
 ###for i in $images; do
 ###  echo "         $i"
@@ -373,7 +373,7 @@ create_swarm_configs $(ls res/swarm/configs/Graphite_*)
 ###  tput cuu1; echo " ${CHECK}     $f"
 ###done
 echo "       Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images "$(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)"
 ###for image in `cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq`; do
 ###  echo "         $image"
 ###  docker pull $image >> /dev/null
@@ -406,7 +406,7 @@ make_persistant_storage "/opt/docker/stack.grafana/service.grafana/data/"
 chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 
 echo "       Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images "$(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)"
 ###images=`cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq`
 ###for i in $images; do
 ###  echo "         $i"
@@ -424,7 +424,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
 tput cuu1; echo " ${CHECK}   Deploy the stack"
-wait_for_service "http://${ipfqdn}:8080/api"
+wait_for_service "curl http://${ipfqdn}/grafana/login"
 ###echo -n "       Waiting for services to come up [  "
 ###i=1
 ###sp="/-\|"
@@ -490,7 +490,7 @@ create_swarm_configs $(ls res/swarm/configs/Telegraf_*)
 ###  tput cuu1; echo " ${CHECK}     $f"
 ###done
 echo "       Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images "$(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)"
 ###images=`cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq`
 ###for i in $images; do
 ###  echo "         $i"
