@@ -98,7 +98,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.relays.043e8543ebdc.metricsReceived)"
+            "target": "sumSeries(graphite.relay.$relays.metricsReceived)"
           }
         ],
         "thresholds": "",
@@ -176,7 +176,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.relays.$relays.destinations.carbon:2003.queued)",
+            "target": "sumSeries(graphite.relay.$relays.destinations.carbon:2003.queued)",
             "textEditor": false
           }
         ],
@@ -255,7 +255,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.carbon.$carbons.persister.committedPoints)",
+            "target": "sumSeries(graphite.carbon.$carbons.persister.committedPoints)",
             "textEditor": true
           }
         ],
@@ -334,7 +334,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.carbon.$carbons.persister.updateOperations)",
+            "target": "sumSeries(graphite.carbon.$carbons.persister.updateOperations)",
             "textEditor": false
           }
         ],
@@ -413,7 +413,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.carbon.$carbons.persister.created)"
+            "target": "sumSeries(graphite.carbon.$carbons.persister.created)"
           }
         ],
         "thresholds": "",
@@ -491,7 +491,7 @@
         "targets": [
           {
             "refId": "A",
-            "target": "sumSeries(carbon.carbon.$carbons.tcp.metricsReceived)",
+            "target": "sumSeries(graphite.carbon.$carbons.tcp.metricsReceived)",
             "textEditor": false
           }
         ],
@@ -564,13 +564,13 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(carbon.relays.$relays.metricsReceived), 'Received')",
+            "target": "alias(sumSeries(graphite.relay.$relays.metricsReceived), 'Received')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(carbon.relays.$relays.metricsSent), 'Sent')",
+            "target": "alias(sumSeries(graphite.relay.$relays.metricsSent), 'Sent')",
             "textEditor": false
           }
         ],
@@ -658,19 +658,19 @@
           {
             "refCount": 0,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.relays.$relays.metricsQueued), 'Queued')",
+            "target": "alias(sumSeries(graphite.relay.$relays.metricsQueued), 'Queued')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "D",
-            "target": "alias(sumSeries(carbon.relays.$relays.metricsDropped), 'Dropped')",
+            "target": "alias(sumSeries(graphite.relay.$relays.metricsDropped), 'Dropped')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "E",
-            "target": "alias(sumSeries(carbon.relays.$relays.metricsBlackholed), 'Blackholed')",
+            "target": "alias(sumSeries(graphite.relay.$relays.metricsBlackholed), 'Blackholed')",
             "textEditor": false
           }
         ],
@@ -790,25 +790,25 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.persister.updateOperations), 'Updates')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.persister.updateOperations), 'Updates')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.persister.committedPoints), 'Committed')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.persister.committedPoints), 'Committed')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "F",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.persister.created), 'Creates')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.persister.created), 'Creates')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.persister.pointsPerUpdate), 'Points Per Update')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.persister.pointsPerUpdate), 'Points Per Update')",
             "textEditor": false
           }
         ],
@@ -915,13 +915,13 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.tcp.metricsReceived), 'TCP')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.tcp.metricsReceived), 'TCP')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.udp.metricsReceived), 'UDP')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.udp.metricsReceived), 'UDP')",
             "textEditor": false
           }
         ],
@@ -1013,7 +1013,7 @@
           {
             "hide": false,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.cache.size), 'Size')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.cache.size), 'Size')",
             "textEditor": false
           }
         ],
@@ -1106,14 +1106,14 @@
             "hide": false,
             "refCount": 0,
             "refId": "C",
-            "target": "aliasByMetric(sumSeries(carbon.carbon.$carbons.carbonserver.disk_requests))",
+            "target": "aliasByMetric(sumSeries(graphite.carbon.$carbons.carbonserver.disk_requests))",
             "textEditor": false
           },
           {
             "hide": true,
             "refCount": 0,
             "refId": "A",
-            "target": "carbon.carbon.$carbons.carbonserver.find_cache_miss",
+            "target": "graphite.carbon.$carbons.carbonserver.find_cache_miss",
             "textEditor": false
           }
         ],
@@ -1206,14 +1206,14 @@
             "hide": false,
             "refCount": 0,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.carbonserver.find_cache_hit), 'Hit')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.carbonserver.find_cache_hit), 'Hit')",
             "textEditor": false
           },
           {
             "hide": false,
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.carbonserver.find_cache_miss), 'Miss')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.carbonserver.find_cache_miss), 'Miss')",
             "textEditor": false
           }
         ],
@@ -1306,14 +1306,14 @@
             "hide": false,
             "refCount": 0,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.carbonserver.query_cache_hit), 'Hit')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.carbonserver.query_cache_hit), 'Hit')",
             "textEditor": false
           },
           {
             "hide": false,
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.carbonserver.find_cache_miss), 'Miss')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.carbonserver.find_cache_miss), 'Miss')",
             "textEditor": false
           }
         ],
@@ -1405,7 +1405,7 @@
           {
             "hide": false,
             "refId": "C",
-            "target": "alias(sumSeries(carbon.carbon.$carbons.carbonserver.query_cache_hit), 'Hit')",
+            "target": "alias(sumSeries(graphite.carbon.$carbons.carbonserver.query_cache_hit), 'Hit')",
             "textEditor": false
           }
         ],
@@ -1505,14 +1505,14 @@
             "hide": false,
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(carbon.api.$apis.render_requests), 'Render')",
+            "target": "alias(sumSeries(graphite.api.$apis.render_requests), 'Render')",
             "textEditor": false
           },
           {
             "hide": false,
             "refCount": 0,
             "refId": "C",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.find_requests)), 'Find')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.find_requests)), 'Find')",
             "textEditor": false
           }
         ],
@@ -1596,13 +1596,13 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.find_cache_hits)), 'Hits')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.find_cache_hits)), 'Hits')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.find_cache_misses)), 'Misses')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.find_cache_misses)), 'Misses')",
             "textEditor": false
           }
         ],
@@ -1686,13 +1686,13 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.request_cache_hits)), 'Hits')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.request_cache_hits)), 'Hits')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.request_cache_misses)), 'Misses')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.request_cache_misses)), 'Misses')",
             "textEditor": false
           }
         ],
@@ -1776,13 +1776,13 @@
           {
             "refCount": 0,
             "refId": "A",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.find_cache_overhead_ns)), 'Find')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.find_cache_overhead_ns)), 'Find')",
             "textEditor": false
           },
           {
             "refCount": 0,
             "refId": "B",
-            "target": "alias(sumSeries(nonNegativeDerivative(carbon.api.$apis.request_cache_overhead_ns)), 'Request')",
+            "target": "alias(sumSeries(nonNegativeDerivative(graphite.api.$apis.request_cache_overhead_ns)), 'Request')",
             "textEditor": false
           }
         ],
@@ -1844,14 +1844,14 @@
             "value": "$__all"
           },
           "datasource": "Graphite",
-          "definition": "carbon.relays.*",
+          "definition": "graphite.relay.*",
           "hide": 2,
           "includeAll": true,
           "label": null,
           "multi": false,
           "name": "relays",
           "options": [],
-          "query": "carbon.relays.*",
+          "query": "graphite.relay.*",
           "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
@@ -1869,14 +1869,14 @@
             "value": "$__all"
           },
           "datasource": "Graphite",
-          "definition": "carbon.carbon.*",
+          "definition": "graphite.carbon.*",
           "hide": 2,
           "includeAll": true,
           "label": null,
           "multi": false,
           "name": "carbons",
           "options": [],
-          "query": "carbon.carbon.*",
+          "query": "graphite.carbon.*",
           "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
@@ -1896,14 +1896,14 @@
             ]
           },
           "datasource": "Graphite",
-          "definition": "carbon.api.*",
+          "definition": "graphite.api.*",
           "hide": 2,
           "includeAll": true,
           "label": null,
           "multi": true,
           "name": "apis",
           "options": [],
-          "query": "carbon.api.*",
+          "query": "graphite.api.*",
           "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
