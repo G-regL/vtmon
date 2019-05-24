@@ -39,7 +39,7 @@ function wait_for_service () {
   echo -n "       Waiting for services to come up [  "
   i=1
   sp="/-\|"
-  until curl -s -o /dev/null $1 ; do
+  until $1 ; do
     printf "\b\b${sp:i++%${#sp}:1}]"
     sleep 0.5
   done
@@ -79,12 +79,15 @@ while true; do
     echo "ERROR: Passwords didn't match, please try again"
 done
 unset adminPass2
+echo
+
 echo "We need to know the IP or FQDN of this system, so that we can properly setup"
 echo "some components."
 disc_ipfqdn=`if [ $(hostname -s) != "localhost" ]; then hostname; else ip route | grep -v default | grep -v docker | cut -d\   -f9; fi`
 read -p " IP or FQDN of this machine [$disc_ipfqdn]: " ipfqdn
 ipfqdn=${ipfqdn:-$disc_ipfqdn}
 unset disc_ipfqdn
+echo
 
 echo "We need to know the FQDNs of the vCenters you want to monitor."
 echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.example.org'"
@@ -104,6 +107,8 @@ while true; do
     echo "ERROR: Passwords didn't match, please try again"
 done
 unset vcpassword2
+echo
+echo
 
 echo "We've got everything we need to setup, so sit back and watch things happen!"
 read -p " Hit ENTER to continue"
@@ -252,7 +257,7 @@ pull_docker_images "$(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '
 echo "       Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
 tput cuu1; echo " ${CHECK}   Deploy the stack"
-wait_for_service http://${ipfqdn}:9000/api/status
+wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
 ###echo -n "       Waiting for services to come up [  "
 ###i=1
 ###sp="/-\|"
@@ -301,7 +306,7 @@ make_persistant_storage "/opt/docker/stack.Traefik/service.traefik/logs"
 ###  tput cuu1; echo " ${CHECK}     $dir"
 ###done
 echo "       Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Traefik_*)
+create_swarm_configs "$(ls res/swarm/configs/Traefik_*)"
 ###configs=`ls res/swarm/configs/Traefik_*`
 ###for c in $configs; do
 ###  f=`basename $c`
@@ -329,7 +334,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F file=@res/swarm/stacks/traefik.yml
 tput cuu1; echo " ${CHECK}   Deploy the stack"
 
-wait_for_service "http://${ipfqdn}:8080/api"
+wait_for_service "curl -s -o /dev/null http://${ipfqdn}:8080/api"
 ###echo -n "       Waiting for services to come up [  "
 ###i=1
 ###sp="/-\|"
@@ -365,7 +370,7 @@ chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
 ##sysctl -w vm.dirty_expire_centisecs=$(( 10*60*100 ))
 echo "       Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Graphite_*)
+create_swarm_configs "$(ls res/swarm/configs/Graphite_*)"
 ###for config in `ls res/swarm/configs/Graphite_*`; do
 ###  f=`basename $config`
 ###  echo "         $f"
@@ -424,7 +429,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
 tput cuu1; echo " ${CHECK}   Deploy the stack"
-wait_for_service "curl http://${ipfqdn}/grafana/login"
+wait_for_service "curl http://${ipfqdn}:8080/api  -s| jq ''.docker.backends.\"backend-Grafana-grafana\"' -e > /dev/null"
 ###echo -n "       Waiting for services to come up [  "
 ###i=1
 ###sp="/-\|"
@@ -481,7 +486,7 @@ echo
 # Deploy Telegraf, using the Portainer API
 echo "     Deploy Telegraf"
 echo "       Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Telegraf_*)
+create_swarm_configs "$(ls res/swarm/configs/Telegraf_*)"
 ###configs=`ls res/swarm/configs/Telegraf_*`
 ###for c in $configs; do
 ###  f=`basename $c`
