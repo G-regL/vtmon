@@ -328,15 +328,18 @@ make_persistant_storage /opt/docker/stack.graphite/service.relay/ /opt/docker/st
 
 chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### Set some system options to optimize it for Graphite
-##echo "  Tuning host system"
+echo "     Tuning host system"
 ### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS
 ### block size (4KB) per metric.
-##sysctl -w vm.dirty_ratio=80
+echo "vm.dirty_ratio=50" >> /etc/sysctl.d/10-graphite.conf
 ### percentage of yout RAM when background writer have to kick in and start writes to disk. Make it way above the value
 ### you see in `/proc/meminfo|grep Dirty` so that it doesn't interefere with dirty_expire_centisecs explained below
-##sysctl -w vm.dirty_background_ratio=50
+echo "vm.dirty_background_ratio=50" >> /etc/sysctl.d/10-graphite.conf
 ### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
-##sysctl -w vm.dirty_expire_centisecs=$(( 10*60*100 ))
+echo "vm.dirty_expire_centisecs=60000" >> /etc/sysctl.d/10-graphite.conf
+sysctl --system >> /dev/null
+tput cuu1; echo " ${CHECK} Tuning host system"
+
 echo "     Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/Graphite_*)
 
