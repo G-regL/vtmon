@@ -55,20 +55,22 @@ function make_filesystem () {
   mountpoint=$4
   echo " Set up $device as $mountpoint ($volgroup-$volname)"
   echo "     Partition disk"
-  parted -s $device mktable gpt >> /dev/null
-  parted -s $device mkpart primary 0% 100% >> /dev/null
+  parted -s $device mktable gpt > /dev/null
+  parted -s $device mkpart primary 0% 100% > /dev/null
   tput cuu1; echo " ${CHECK} Create partition"
 
+  partition=$(ls /dev/${device}?)
+
   echo "     Create LVM physical volume"
-  pvcreate $device >> /dev/null
+  pvcreate ${partition} > /dev/null
   tput cuu1; echo " ${CHECK} Create LVM physical volume"
 
   echo "     Create LVM volume group"
-  vgcreate $volgroup $device >> /dev/null
+  vgcreate $volgroup ${partition} > /dev/null
   tput cuu1; echo " ${CHECK} Create LVM volume group"
 
   echo "     Create LVM logical volume"
-  lvcreate $volgroup -l 100%FREE -n $volname $device >> /dev/null
+  lvcreate $volgroup -l 100%FREE -n $volname ${partition} > /dev/null
   tput cuu1; echo " ${CHECK} Create LVM logical volume"
 
   echo -n "     Make filesystem [  "
