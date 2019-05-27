@@ -13,7 +13,7 @@ function pull_docker_images () {
     while [ -d /proc/$PID ]; do
       printf "\b\b${sp:c++%${#sp}:1}]"
       sleep 0.5
-    done
+    donels
     echo
     echo "${CUU1} ${CHECK}   $i     "
   done
@@ -59,7 +59,7 @@ function make_filesystem () {
   parted -s $device mkpart primary 0% 100% > /dev/null
   tput cuu1; echo " ${CHECK} Create partition"
 
-  partition=$(ls /dev/${device}?)
+  partition="${device}1"
 
   echo "     Create LVM physical volume"
   pvcreate ${partition} > /dev/null
