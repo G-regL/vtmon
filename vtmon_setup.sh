@@ -1,9 +1,10 @@
 #!/bin/bash
 
 CHECK="[$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
+CUU1="$(tput cuu1)"
 
 function pull_docker_images () {
-  for i in $1; do
+  for i in $*; do
     echo -n "       $i [  "
     docker pull $i >> /dev/null &
     PID=$!
@@ -14,12 +15,12 @@ function pull_docker_images () {
       sleep 0.5
     done
     echo
-    tput cuu1; echo " ${CHECK}   $i     "
+    echo "${CUU1} ${CHECK}   $i     "
   done
 }
 
 function create_swarm_configs () {
-  for config in $1; do
+  for config in $*; do
     f=`basename $config`
     echo "       $f"
     docker config create $f $config >> /dev/null
@@ -28,7 +29,7 @@ function create_swarm_configs () {
 }
 
 function make_persistant_storage () {
-  for dir in $1; do
+  for dir in $*; do
     echo "       $dir"
     mkdir -p $dir >> /dev/null
     tput cuu1; echo " ${CHECK}   $dir"
@@ -39,7 +40,7 @@ function wait_for_service () {
   echo -n "       Waiting for services to come up [  "
   i=1
   sp="/-\|"
-  until $1 ; do
+  until eval $*; do
     printf "\b\b${sp:i++%${#sp}:1}]"
     sleep 0.5
   done
@@ -47,9 +48,31 @@ function wait_for_service () {
   tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
 }
 
-make_filesystem () {
+function make_filesystem () {
+  device=$1
+  volgroup=$2
+  volname=$3
+  mountpoint=$4
+  echo " Set up $device as $mountpoint ($volgroup-$volname)"
+  echo "     Partition disk"
+  parted -s $device mktable gpt >> /dev/null
+  parted -s $device mkpart primary 0% 100% >> /dev/null
+  tput cuu1; echo " ${CHECK} Create partition"
+
+  echo "     Create LVM physical volume"
+  pvcreate $device >> /dev/null
+  tput cuu1; echo " ${CHECK} Create LVM physical volume"
+
+  echo "     Create LVM volume group"
+  vgcreate $volgroup $device >> /dev/null
+  tput cuu1; echo " ${CHECK} Create LVM volume group"
+
+  echo "     Create LVM logical volume"
+  lvcreate $volgroup -l 100%FREE -n $volname $device >> /dev/null
+  tput cuu1; echo " ${CHECK} Create LVM logical volume"
+
   echo -n "     Make filesystem [  "
-  mkfs.xfs -fq $1 > /dev/null &
+  mkfs.xfs -fq /dev/$volgroup/$volname > /dev/null &
   PID=$!
   c=1
   sp="/-\|"
@@ -59,6 +82,14 @@ make_filesystem () {
   done
   echo
   tput cuu1; echo " ${CHECK} Make filesystem    "
+
+  echo "     Add fstab entry"
+  echo "/dev/$volgroup/$volname    $mountpoint                    xfs     defaults        1 1" >> /etc/fstab
+  tput cuu1; echo " ${CHECK} Add fstab entry"
+
+  echo "     Mount filesystem"
+  mount $mountpoint >> /dev/null
+  tput cuu1; echo " ${CHECK} Mount filesystem"
 }
 
 echo "+-------------------------------------------------------------------+"
@@ -117,75 +148,55 @@ read -p " Hit ENTER to continue"
 echo
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
-echo " Set up /dev/sdb as /var/lib/docker (vg01-docker)"
-echo "     Create partition"
-parted -s /dev/sdb mktable gpt >> /dev/null
-parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
-tput cuu1; echo " ${CHECK} Create partition"
-
-echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
-pvcreate /dev/sdb1 >> /dev/null
-vgcreate vg01 /dev/sdb1 >> /dev/null
-lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
-tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
-
-make_filesystem "/dev/mapper/vg01-docker"
-###echo "       Make filesystem [  "
-###mkfs.xfs -fq /dev/mapper/vg01-docker > /dev/null &
-###PID=$!
-###c=1
-###sp="/-\|"
-###while [ -d /proc/$PID ]; do
-###  printf "\b\b${sp:c++%${#sp}:1}]"
-###  sleep 0.5
-###done
+make_filesystem /dev/sdb vg01 docker /var/lib/docker
+###echo " Set up /dev/sdb as /var/lib/docker (vg01-docker)"
+###echo "     Create partition"
+###parted -s /dev/sdb mktable gpt >> /dev/null
+###parted -s /dev/sdb mkpart primary 0% 100% >> /dev/null
+###tput cuu1; echo " ${CHECK} Create partition"
+###
+###echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
+###pvcreate /dev/sdb1 >> /dev/null
+###vgcreate vg01 /dev/sdb1 >> /dev/null
+###lvcreate vg01 -l 100%FREE -n docker /dev/sdb1 >> /dev/null
+###tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
+###
+###make_filesystem "/dev/mapper/vg01-docker"
+###
+###echo "     Add fstab entry"
+###mkdir /var/lib/docker >> /dev/null
+###echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
+###tput cuu1; echo " ${CHECK} Add fstab entry"
+###
+###echo "     Mount filesystem"
+###mount -a >> /dev/null
+###tput cuu1; echo " ${CHECK} Mount filesystem"
 ###echo
-###tput cuu1; echo " ${CHECK}   Make filesystem    "
-
-echo "     Add fstab entry"
-mkdir /var/lib/docker >> /dev/null
-echo '/dev/mapper/vg01-docker /var/lib/docker         xfs     defaults        1 1' >> /etc/fstab
-tput cuu1; echo " ${CHECK} Add fstab entry"
-
-echo "     Mount filesystem"
-mount -a >> /dev/null
-tput cuu1; echo " ${CHECK} Mount filesystem"
-echo
 
 # Create the /opt mountpoint
-echo " Set up /dev/sdc as /opt (vg02-opt)"
-echo "     Create partition"
-parted -s /dev/sdc mktable gpt >> /dev/null
-parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
-tput cuu1; echo " ${CHECK} Create partition"
-
-echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
-pvcreate /dev/sdc1 >> /dev/null
-vgcreate vg02 /dev/sdc1 >> /dev/null
-lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
-tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
-
-make_filesystem "/dev/mapper/vg02-opt"
-###echo "       Make filesystem [  "
-###mkfs.xfs -fq /dev/mapper/vg02-opt > /dev/null &
-###PID=$!
-###c=1
-###sp="/-\|"
-###while [ -d /proc/$PID ]; do
-###  printf "\b\b${sp:c++%${#sp}:1}]"
-###  sleep 0.5
-###done
+#echo " Set up /dev/sdc as /opt (vg02-opt)"
+make_filesystem /dev/sdc vg02 opt /opt
+###echo "     Create partition"
+###parted -s /dev/sdc mktable gpt >> /dev/null
+###parted -s /dev/sdc mkpart primary 0% 100% >> /dev/null
+###tput cuu1; echo " ${CHECK} Create partition"
+###
+###echo "     Create PhysicalVolume, VolumeGroup and LogicalVolume"
+###pvcreate /dev/sdc1 >> /dev/null
+###vgcreate vg02 /dev/sdc1 >> /dev/null
+###lvcreate vg02 -l 100%FREE -n opt /dev/sdc1 >> /dev/null
+###tput cuu1; echo " ${CHECK} Create PhysicalVolume, VolumeGroup and LogicalVolume"
+###
+###make_filesystem "/dev/mapper/vg02-opt"
+###
+###echo "     Add fstab entry"
+###echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
+###tput cuu1; echo " ${CHECK} Add fstab entry"
+###
+###echo "     Mount filesystem"
+###mount -a >> /dev/null
+###tput cuu1; echo " ${CHECK} Mount filesystem"
 ###echo
-###tput cuu1; echo " ${CHECK}   Make filesystem    "
-
-echo "     Add fstab entry"
-echo '/dev/mapper/vg02-opt    /opt                    xfs     defaults        1 1' >> /etc/fstab
-tput cuu1; echo " ${CHECK} Add fstab entry"
-
-echo "     Mount filesystem"
-mount -a >> /dev/null
-tput cuu1; echo " ${CHECK} Mount filesystem"
-echo
 
 
 
@@ -196,7 +207,7 @@ echo "     Remove old Docker packages"
 yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
 tput cuu1; echo " ${CHECK} Remove old Docker packages"
 # Install some dependencies
-echo "     Install some needed packages"
+echo "     Install required needed packages"
 yum install -qy yum-utils device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
 tput cuu1; echo " ${CHECK} Install some needed packages"
 # Add the official Docker repo
@@ -209,10 +220,10 @@ yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
 tput cuu1; echo " ${CHECK} Install Docker"
 echo
 
-echo " Setup Docker Swarm"
+echo " Setup Docker"
 # -------- Docker
 # Copy the Docker configs
-echo "     Copy the Docker config files"
+echo "     Copy the Docker daemon config files"
 cp -fr res/docker/ /etc/ >> /dev/null
 tput cuu1; echo " ${CHECK} Copy the Docker config files"
 
@@ -230,9 +241,9 @@ tput cuu1; echo " ${CHECK} Initialize the Docker Swarm"
 # Setup some networks
 echo " Create networks"
 for net in traefik-net graphite-net elastic-net; do
-  echo "          $net"
+  echo "     $net"
   docker network create --driver overlay --attachable $net >> /dev/null
-  tput cuu1; echo " ${CHECK}      $net"
+  tput cuu1; echo " ${CHECK} $net"
 done
 read -p "     Hit ENTER to continue"
 echo
@@ -240,42 +251,16 @@ echo
 # Deploy Portainer, using the command-line
 echo " Deploy Portainer"
 echo "     Make persistent storage"
-make_persistant_storage "/opt/docker/stack.Portainer/service.portainer"
-###for dir in "/opt/docker/stack.Portainer/service.portainer"; do
-###  echo "         $dir"
-###  mkdir -p $dir >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $dir"
-###done
+make_persistant_storage /opt/docker/stack.Portainer/service.portainer
+
 echo "     Pull Docker images"
-pull_docker_images "$(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)"
-###images=`cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq`
-###for i in $images; do
-###  echo -n "         $i [  "
-###  docker pull $i >> /dev/null &
-###  PID=$!
-###  c=1
-###  sp="/-\|"
-###  while [ -d /proc/$PID ]
-###  do
-###    printf "\b\b${sp:c++%${#sp}:1}]"
-###    sleep 0.5
-###  done
-###  echo
-###  tput cuu1; echo " ${CHECK}     $i     "
-###done
+pull_docker_images $(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)
+
 echo "     Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
 tput cuu1; echo " ${CHECK} Deploy the stack"
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
-###echo -n "       Waiting for services to come up [  "
-###i=1
-###sp="/-\|"
-###until curl -s -o /dev/null http://${ipfqdn}:9000/api/status ; do
-###  printf "\b\b${sp:i++%${#sp}:1}]"
-###  sleep 0.5
-###done
-###echo
-###tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
+
 
 echo "     Set up Portainer"
 # Change admin password
@@ -308,29 +293,14 @@ echo
 # Deploy Traefik, using the Portainer API
 echo " Deploy Traefik"
 echo "     Make persistent storage"
-make_persistant_storage "/opt/docker/stack.Traefik/service.traefik/logs"
-###for dir in "/opt/docker/stack.Traefik/service.traefik/logs"; do
-###  echo "         $dir"
-###  mkdir -p $dir >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $dir"
-###done
+make_persistant_storage /opt/docker/stack.Traefik/service.traefik/logs
+
 echo "     Create Docker Swarm config files"
-create_swarm_configs "$(ls res/swarm/configs/Traefik_*)"
-###configs=`ls res/swarm/configs/Traefik_*`
-###for c in $configs; do
-###  f=`basename $c`
-###  echo "         $f"
-###  docker config create $f $c >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $f"
-###done
+create_swarm_configs $(ls res/swarm/configs/Traefik_*)
+
 echo "     Pull Docker images"
-pull_docker_images "$(cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq)"
-###images=`cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq`
-###for i in $images; do
-###  echo "         $i"
-###  docker pull $i >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $i"
-###done
+pull_docker_images $(cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq)
+
 echo "     Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -344,15 +314,6 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 tput cuu1; echo " ${CHECK} Deploy the stack"
 
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:8080/api"
-###echo -n "       Waiting for services to come up [  "
-###i=1
-###sp="/-\|"
-###until curl -s -o /dev/null http://${ipfqdn}:8080/api ; do
-###  printf "\b\b${sp:i++%${#sp}:1}]"
-###  sleep 0.5
-###done
-###echo
-###tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
 echo " DONE"
 read -p " Hit ENTER to continue"
 echo
@@ -361,12 +322,8 @@ echo
 # Deploy Graphite, using the Portainer API
 echo " Deploy Graphite"
 echo "     Make persistent storage"
-make_persistant_storage "/opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/"
-###for dir in /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/; do
-###  echo "         $dir"
-###  mkdir -p $dir >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $dir"
-###done
+make_persistant_storage /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/
+
 chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### Set some system options to optimize it for Graphite
 ##echo "  Tuning host system"
@@ -379,20 +336,11 @@ chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
 ##sysctl -w vm.dirty_expire_centisecs=$(( 10*60*100 ))
 echo "     Create Docker Swarm config files"
-create_swarm_configs "$(ls res/swarm/configs/Graphite_*)"
-###for config in `ls res/swarm/configs/Graphite_*`; do
-###  f=`basename $config`
-###  echo "         $f"
-###  docker config create $f $config >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $f"
-###done
+create_swarm_configs $(ls res/swarm/configs/Graphite_*)
+
 echo "     Pull Docker images"
-pull_docker_images "$(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)"
-###for image in `cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq`; do
-###  echo "         $image"
-###  docker pull $image >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $image"
-###done
+pull_docker_images $(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)
+
 echo "     Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -411,22 +359,12 @@ echo
 # Deploy Grafana, using the Portainer API
 echo " Deploy Grafana"
 echo "     Make persistent storage"
-make_persistant_storage "/opt/docker/stack.grafana/service.grafana/data/"
-###for dir in /opt/docker/stack.grafana/service.grafana/data/; do # /opt/docker/stack.grafana/service.grafana/provisioning
-###  echo "         $dir"
-###  mkdir -p $dir >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $dir"
-###done
+make_persistant_storage /opt/docker/stack.grafana/service.grafana/data/
 chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 
 echo "     Pull Docker images"
-pull_docker_images "$(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)"
-###images=`cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq`
-###for i in $images; do
-###  echo "         $i"
-###  docker pull $i >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $i"
-###done
+pull_docker_images $(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)
+
 echo "     Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -439,15 +377,8 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null
 tput cuu1; echo " ${CHECK} Deploy the stack"
 wait_for_service "curl -s http://${ipfqdn}:8080/api | jq '.docker.backends.\"backend-Grafana-grafana\"' -e > /dev/null"
-###echo -n "       Waiting for services to come up [  "
-###i=1
-###sp="/-\|"
 ###until curl http://${ipfqdn}:8080/api  -s| jq '.docker.backends."backend-Grafana-grafana"' -e > /dev/null ; do
-###  printf "\b\b${sp:i++%${#sp}:1}]"
-###  sleep 0.5
-###done
-###echo
-###tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
+
 
 # Set Grafana admin password
 echo "     Set up Grafana"
@@ -495,22 +426,11 @@ echo
 # Deploy Telegraf, using the Portainer API
 echo " Deploy Telegraf"
 echo "     Create Docker Swarm config files"
-create_swarm_configs "$(ls res/swarm/configs/Telegraf_*)"
-###configs=`ls res/swarm/configs/Telegraf_*`
-###for c in $configs; do
-###  f=`basename $c`
-###  echo "         $f"
-###  docker config create $f $c >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $f"
-###done
+create_swarm_configs $(ls res/swarm/configs/Telegraf_*)
+
 echo "     Pull Docker images"
-pull_docker_images "$(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)"
-###images=`cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq`
-###for i in $images; do
-###  echo "         $i"
-###  docker pull $i >> /dev/null
-###  tput cuu1; echo " ${CHECK}     $i"
-###done
+pull_docker_images $(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)
+
 echo "     Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
