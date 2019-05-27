@@ -13,7 +13,7 @@ function pull_docker_images () {
     while [ -d /proc/$PID ]; do
       printf "\b\b${sp:c++%${#sp}:1}]"
       sleep 0.5
-    donels
+    done
     echo
     echo "${CUU1} ${CHECK}   $i     "
   done
@@ -24,7 +24,7 @@ function create_swarm_configs () {
     f=`basename $config`
     echo "       $f"
     docker config create $f $config >> /dev/null
-    tput cuu1; echo " ${CHECK}   $f"
+    echo "${CUU1} ${CHECK}   $f"
   done
 }
 
@@ -32,7 +32,7 @@ function make_persistant_storage () {
   for dir in $*; do
     echo "       $dir"
     mkdir -p $dir >> /dev/null
-    tput cuu1; echo " ${CHECK}   $dir"
+    echo "${CUU1} ${CHECK}   $dir"
   done
 }
 
@@ -45,7 +45,7 @@ function wait_for_service () {
     sleep 0.5
   done
   echo
-  tput cuu1; echo " ${CHECK}   Waiting for services to come up    "
+  echo "${CUU1} ${CHECK}   Waiting for services to come up    "
 }
 
 function make_filesystem () {
@@ -57,21 +57,21 @@ function make_filesystem () {
   echo "     Partition disk"
   parted -s $device mktable gpt > /dev/null
   parted -s $device mkpart primary 0% 100% > /dev/null
-  tput cuu1; echo " ${CHECK} Create partition"
+  echo "${CUU1} ${CHECK} Create partition"
 
   partition="${device}1"
 
   echo "     Create LVM physical volume"
   pvcreate ${partition} > /dev/null
-  tput cuu1; echo " ${CHECK} Create LVM physical volume"
+  echo "${CUU1} ${CHECK} Create LVM physical volume"
 
   echo "     Create LVM volume group"
   vgcreate $volgroup ${partition} > /dev/null
-  tput cuu1; echo " ${CHECK} Create LVM volume group"
+  echo "${CUU1} ${CHECK} Create LVM volume group"
 
   echo "     Create LVM logical volume"
   lvcreate $volgroup -l 100%FREE -n $volname ${partition} > /dev/null
-  tput cuu1; echo " ${CHECK} Create LVM logical volume"
+  echo "${CUU1} ${CHECK} Create LVM logical volume"
 
   echo -n "     Make filesystem [  "
   mkfs.xfs -fq /dev/$volgroup/$volname > /dev/null &
@@ -83,25 +83,25 @@ function make_filesystem () {
     sleep 0.5
   done
   echo
-  tput cuu1; echo " ${CHECK} Make filesystem    "
+  echo "${CUU1} ${CHECK} Make filesystem    "
 
   echo "     Add fstab entry"
   echo "/dev/$volgroup/$volname    $mountpoint                    xfs     defaults        1 1" >> /etc/fstab
-  tput cuu1; echo " ${CHECK} Add fstab entry"
+  echo "${CUU1} ${CHECK} Add fstab entry"
 
   echo "     Mount filesystem"
   mount $mountpoint >> /dev/null
-  tput cuu1; echo " ${CHECK} Mount filesystem"
+  echo "${CUU1} ${CHECK} Mount filesystem"
 }
 
-echo "+-------------------------------------------------------------------+"
-echo "+           Setup Virtualization Technologies Monitoring            +"
-echo "+-------------------------------------------------------------------+"
+echo "+------------------------------------------------------------------------------+"
+echo "+                 Setup Virtualization Technologies Monitoring                 +"
+echo "+------------------------------------------------------------------------------+"
 echo
 echo "We need to gather some details for the depoyment before proceeding"
 echo 
-echo "Portainer and Grafana both need to have an admin user account created"
-echo "and we'll need to know what password you want to use."
+echo "Portainer and Grafana both need to have an admin user account created and we'll"
+echo "need to know what password you want to use."
 # Gather some details for the deployment
 while true; do
     read -p " Admin user password: " adminPass
@@ -123,14 +123,14 @@ unset disc_ipfqdn
 echo
 
 echo "We need to know the FQDNs of the vCenters you want to monitor."
-echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vcprod.int.example.org'"
+echo "Enter them as a comma-separated list, eg: 'vc01.example.com,vc.int.example.org'"
 read -p " vCenter addresses: "
 vcenters=$(echo 'https://'$REPLY'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')
 echo
 
-echo "Please enter a username, and password, which we'll use to connect to each vCenter "
-echo "above in order to gather the metrics. It should have the 'Read-only' role granted "
-echo "to it at the root of the vCenter."
+echo "Please enter a username, and password, which we'll use to connect to each"
+echo "vCenter above in order to gather the metrics. It should have the 'Read-only'"
+echo "role granted to it at the root of the vCenter."
 echo "It's recommended to use an SSO account, for ease of management"
 read -p " vCenter user: " vcuser
 while true; do
