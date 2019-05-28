@@ -2,7 +2,7 @@ version: "3.6"
 
 services:
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:6.2.1
     volumes:
       - /opt/docker/stack.grafana/service.grafana/data:/var/lib/grafana
     healthcheck:

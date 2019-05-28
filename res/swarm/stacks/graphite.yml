@@ -2,7 +2,7 @@ version: "3.6"
 
 services:
   api:
-    image: openmetric/carbonapi:latest
+    image: openmetric/carbonapi:0.11.0
     configs:
       - source: Graphite_api-api.yaml-20190517.0831
         target: /openmetric/conf/api.yaml
@@ -16,7 +16,7 @@ services:
 
 
   carbon:
-    image: openmetric/go-carbon:latest
+    image: openmetric/go-carbon:v0.13.0
     configs:
       - source: Graphite_carbon-carbon.conf-20190517.0836
         target: /openmetric/conf/carbon.conf
@@ -34,7 +34,7 @@ services:
 
 
   relay:
-    image: openmetric/carbon-c-relay:latest
+    image: openmetric/carbon-c-relay:v3.5
     command: carbon-c-relay -f /openmetric/conf/relay.conf -c -_:#@%$$|
     configs:
       - source: Graphite_relay_relay.conf-20190517.0847
