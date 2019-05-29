@@ -147,7 +147,6 @@ while true; do
 done
 unset vcpassword2
 echo
-echo
 
 echo "We've got everything we need to setup, so sit back and watch things happen!"
 read -p " Hit ENTER to continue"
