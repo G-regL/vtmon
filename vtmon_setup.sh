@@ -37,6 +37,7 @@ function make_persistant_storage () {
 }
 
 function wait_for_service () {
+  echo $*
   echo -n "${SPACE} Start services [  "
   i=1
   sp="/-\|"
@@ -155,12 +156,11 @@ echo
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
 make_filesystem /dev/sdb vg01 docker /var/lib/docker
+echo
 
 # Create the /opt mountpoint
 make_filesystem /dev/sdc vg02 opt /opt
-
-
-
+echo
 
 echo " Install/remove packages"
 # -------- Packages
@@ -169,9 +169,9 @@ echo "${SPACE} Remove old Docker packages"
 yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
 echo "${CHECK} Remove old Docker packages"
 # Install some dependencies
-echo "${SPACE} Install required needed packages"
+echo "${SPACE} Install required packages"
 yum install -qy yum-utils device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
-echo "${CHECK} Install some needed packages"
+echo "${CHECK} Install required packages"
 # Add the official Docker repo
 echo "${SPACE} Add the official Docker repo"
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 2&> /dev/null
@@ -202,8 +202,8 @@ echo "${CHECK} Initialize the Docker Swarm"
 echo
 
 # Setup some networks
-echo " Create networks"
-for net in traefik-net graphite-net elastic-net; do
+echo " Create Swarm networks"
+for net in traefik-net graphite-net; do
   echo "${SPACE} $net"
   docker network create --driver overlay --attachable $net >> /dev/null
   echo "${CHECK} $net"
@@ -213,10 +213,10 @@ echo
 
 # Deploy Portainer, using the command-line
 echo "Deploy Portainer"
-echo "${SPACE} Make persistent storage"
+echo " Make persistent storage"
 make_persistant_storage /opt/docker/stack.Portainer/service.portainer
 
-echo "${SPACE} Pull Docker images"
+echo " Pull Docker images"
 pull_docker_images $(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)
 
 echo " Deploy the stack"
@@ -325,7 +325,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F SwarmID=${portSwarmID} \
     -F file=@res/swarm/stacks/graphite.yml 2&> /dev/null
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
-wait_for_service "[ \`docker service ls | grep Graphite |awk -F\  '{print $4}' |grep '1/1' |wc -l\` -eq '3' ]"
+wait_for_service "[ \`docker service ls | grep Graphite | awk '{print \$4}' |grep '1/1' |wc -l\` -eq '3' ]"
 echo "DONE"
 read -p "Hit ENTER to continue"
 echo
@@ -419,7 +419,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
             ]" \
     -F file=@res/swarm/stacks/telegraf.yml 2&> /dev/null
 stack_services=`cat res/swarm/stacks/telegraf.yml |grep replicas |grep -v 0 |wc -l`
-wait_for_service "[ \`docker service ls | grep Telegraf |awk -F\  '{print $4}' |grep '1/1' |wc -l\` -eq '${stack_services}' ]"
+wait_for_service "[ \`docker service ls | grep Telegraf |awk '{print \$4}' |grep '1/1' |wc -l\` -eq '${stack_services}' ]"
 
 echo "DONE"
 
