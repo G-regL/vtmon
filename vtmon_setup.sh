@@ -57,7 +57,7 @@ function make_filesystem () {
   echo "${SPACE} Partition disk"
   parted -s $device mktable gpt > /dev/null
   parted -s $device mkpart primary 0% 100% > /dev/null
-  echo "${CHECK} Create partition"
+  echo "${CHECK} Partition disk"
 
   partition="${device}1"
 
@@ -73,7 +73,7 @@ function make_filesystem () {
   lvcreate $volgroup -l 100%FREE -n $volname ${partition} > /dev/null
   echo "${CHECK} Create LVM logical volume"
 
-  echo -n "${SPACE} Make filesystem [  "
+  echo -n "${SPACE} Format filesystem [  "
   mkfs.xfs -fq /dev/$volgroup/$volname > /dev/null &
   PID=$!
   c=1
@@ -83,7 +83,7 @@ function make_filesystem () {
     sleep 0.5
   done
   echo
-  echo "${CHECK} Make filesystem    "
+  echo "${CHECK} Format filesystem    "
 
   echo "${SPACE} Add fstab entry"
   echo "/dev/$volgroup/$volname    $mountpoint                    xfs     defaults        1 1" >> /etc/fstab
@@ -98,10 +98,12 @@ function make_filesystem () {
 }
 
 echo "+------------------------------------------------------------------------------+"
-echo "+                 Setup Virtualization Technologies Monitoring                 +"
+echo "+        Setup Tool for Virtualization Technologies Monitoring (VTMon)         +"
 echo "+------------------------------------------------------------------------------+"
 echo
 echo "We need to gather some details for the depoyment before proceeding"
+echo
+echo "If you mis-type something, please press Ctrl-C to quit, and restart the setup"
 echo 
 echo "Portainer and Grafana both need to have an admin user account created and we'll"
 echo "need to know what password you want to use."
@@ -132,9 +134,9 @@ vcenters=$(echo 'https://'$REPLY'/sdk' | sed 's~,~/sdk\\\", \\\"https://~g')
 echo
 
 echo "Please enter a username, and password, which we'll use to connect to each"
-echo "vCenter above in order to gather the metrics. It should have the 'Read-only'"
-echo "role granted to it at the root of the vCenter."
-echo "It's recommended to use an SSO account, for ease of management"
+echo "vCenter in order to gather the metrics. It should have the 'Read-only' role"
+echo "granted to it at the root of the vCenter."
+echo "It's recommended to use an SSO account, for ease of management."
 read -p " vCenter user: " vcuser
 while true; do
     read -p " vCenter user password: " vcpassword
@@ -147,10 +149,11 @@ done
 unset vcpassword2
 echo
 
-echo "We've got everything we need to setup, so sit back and watch things happen!"
-read -p " Hit ENTER to continue"
+echo "We've got everything we need to setup, so let's get started!"
+read -p "Hit ENTER to continue"
 echo
 
+echo "System setup"
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
 make_filesystem /dev/sdb vg01 docker /var/lib/docker
@@ -180,7 +183,7 @@ yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
 echo "${CHECK} Install Docker"
 echo
 
-echo " Setup Docker"
+echo " Configure Docker"
 # -------- Docker
 # Copy the Docker configs
 echo "${SPACE} Copy the Docker daemon config files"
@@ -206,6 +209,7 @@ for net in traefik-net graphite-net; do
   docker network create --driver overlay --attachable $net >> /dev/null
   echo "${CHECK} $net"
 done
+echo "DONE"
 read -p "Hit ENTER to continue"
 echo
 
@@ -425,7 +429,8 @@ echo "DONE"
 echo
 echo "VTMon is now deployed and ready to go!"
 echo
-echo "You can visit Grafana at http://${ipfqdn}/grafana/, and login with admin:${adminPass}."
+echo "Please visit Grafana at http://${ipfqdn}/grafana/, and login with admin:${adminPass}."
+echo
 echo "Should you want/need to check on the status of the system, you can use the following URLs"
 echo "  Portainer (Container manager) - http://${ipfqdn}/poratiner/"
 echo "  Traefik (Load balancer)       - http://${ipfqdn}:8080/dashboard/"
