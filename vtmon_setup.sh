@@ -37,7 +37,6 @@ function make_persistant_storage () {
 }
 
 function wait_for_service () {
-  echo $*
   echo -n "${SPACE} Start services [  "
   i=1
   sp="/-\|"
@@ -354,21 +353,22 @@ wait_for_service "curl -s http://${ipfqdn}:8080/api | jq '.docker.backends.\"bac
 
 
 # Set Grafana admin password
-echo " Set up Grafana"
+echo " Configure Grafana"
 echo "${SPACE} Set admin password"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/admin/users/1/password -X PUT \
     -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}'
 echo "${CHECK} Set admin password"
 
 # Create the default datasource
-echo "${SPACE} Create default datasource"
+echo " Create datasources"
+echo "${SPACE} Graphite"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
     -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
     -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'
-echo "${CHECK} Create default datasource"
+echo "${CHECK} Graphite"
 
 # Create Grafana dashboards from the files inside res/grafana/*/*
-echo "${SPACE} Create dashboard folders"
+echo " Create dashboard folders"
 for f in `ls res/grafana`; do
   f_name=${f%-*}
   f_uid=${f#*-}
