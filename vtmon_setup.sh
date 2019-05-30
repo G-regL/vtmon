@@ -3,6 +3,7 @@
 CHECK="$(tput cuu1) [$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
 SPACE="    "
 
+
 function pull_docker_images () {
   for i in $*; do
     echo -n "${SPACE} $i [  "
