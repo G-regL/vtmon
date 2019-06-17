@@ -1,7 +1,11 @@
 cluster default
     fnv1a_ch replication 1
-        carbon:2003
+        carbon-clickhouse:2003
     ;
+cluster moira
+    forward
+    	Moira_filter:2003
+;
 
 statistics
     submit every 60 seconds
@@ -12,6 +16,21 @@ statistics
     stop
     ;
 
+###################################################################################################
+###                   TELEGRAF
+###################################################################################################
+#                  telegraf instance                       type                                                   vc       metric
+rewrite ^telegraf\.(cluster|vm|host|datacenter|datastore)\.(cluster|vm|host|datacenter|datastore|instance-total)\.([^.]+)\.([^.]+)$
+  into telegraf.\1.plugin.vsphere.vc.\3.\2.\4
+;
+#                  telegraf instance                       vc       metric
+rewrite ^telegraf\.(cluster|vm|host|datacenter|datastore)\.([^.]+)\.(connect_ns|discover_ns)$
+  into telegraf.\1.plugin.vsphere.vc.\2.\3
+;
+#                  telegraf instance                       plugin   metric
+rewrite ^telegraf\.(cluster|vm|host|datacenter|datastore)\.([^.]+)\.([^.]+)$
+  into telegraf.\1.plugin.\2.\3
+;
 
 ###################################################################################################
 ###                   VSPHERE
@@ -149,5 +168,6 @@ rewrite ^(servers.+)\.win_(.+)\.%_(.+)
 match *
     send to
         default
+        moira
     stop
     ;

@@ -1,0 +1,117 @@
+<yandex>
+
+<graphite_rollup>
+        <!-- vsphere-historical-datacenter -->
+        <pattern>
+                <regexp>^vsphere\..*\..*\.datacenter\..*</regexp>
+                <function>any</function>
+                <retention>
+                        <age>0</age>
+                        <precision>1800</precision>
+                </retention>
+                <retention>
+                        <age>7882200</age>
+                        <precision>7200</precision>
+                </retention>
+                <retention>
+                        <age>15544800</age>
+                        <precision>21600</precision>
+                </retention>
+                <retention>
+                        <age>31514400</age>
+                        <precision>86400</precision>
+                </retention>
+        </pattern>
+        <!-- vsphere-historical-datastore -->
+        <pattern>
+                <regexp>^vsphere\..*\..*\.datastore\..*</regexp>
+                <function>any</function>
+                <retention>
+                        <age>0</age>
+                        <precision>1800</precision>
+                </retention>
+                <retention>
+                        <age>7882200</age>
+                        <precision>7200</precision>
+                </retention>
+                <retention>
+                        <age>15544800</age>
+                        <precision>21600</precision>
+                </retention>
+                <retention>
+                        <age>31514400</age>
+                        <precision>86400</precision>
+                </retention>
+        </pattern>
+        <!-- vsphere-historical-cluster -->
+        <pattern>
+                <regexp>^vsphere\..*\..*\..*\.cluster\..*</regexp>
+                <function>any</function>
+                <retention>
+                        <age>0</age>
+                        <precision>1800</precision>
+                </retention>
+                <retention>
+                        <age>7882200</age>
+                        <precision>7200</precision>
+                </retention>
+                <retention>
+                        <age>15544800</age>
+                        <precision>21600</precision>
+                </retention>
+                <retention>
+                        <age>31514400</age>
+                        <precision>86400</precision>
+                </retention>
+        </pattern>
+        <!-- vsphere-realtime -->
+        <pattern>
+                <regexp>^vsphere\..*</regexp>
+                <function>any</function>
+                <retention>
+                        <age>0</age>
+                        <precision>60</precision>
+                </retention>
+                <retention>
+                        <age>1209540</age>
+                        <precision>1800</precision>
+                </retention>
+                <retention>
+                        <age>7882200</age>
+                        <precision>7200</precision>
+                </retention>
+                <retention>
+                        <age>15544800</age>
+                        <precision>21600</precision>
+                </retention>
+                <retention>
+                        <age>31514400</age>
+                        <precision>86400</precision>
+                </retention>
+        </pattern>
+        <!-- default -->
+        <default>
+                <function>any</function>
+                <retention>
+                        <age>0</age>
+                        <precision>60</precision>
+                </retention>
+                <retention>
+                        <age>1209540</age>
+                        <precision>1800</precision>
+                </retention>
+                <retention>
+                        <age>7882200</age>
+                        <precision>7200</precision>
+                </retention>
+                <retention>
+                        <age>15544800</age>
+                        <precision>21600</precision>
+                </retention>
+                <retention>
+                        <age>31514400</age>
+                        <precision>86400</precision>
+                </retention>
+        </default>
+</graphite_rollup>
+</yandex>

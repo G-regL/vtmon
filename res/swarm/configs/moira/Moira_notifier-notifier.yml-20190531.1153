@@ -1,0 +1,69 @@
+# Use fields MasterName and SentinelAddrs to enable Redis Sentinel support,
+# use Host and Port fields otherwise.
+redis:
+  # Sentinel cluster name
+  master_name: ""
+  # Sentinel address list, format: {host1_name:port};{ip:port}
+  sentinel_addrs: ""
+  # Node ip-address or host name
+  host: "redis"
+  # Node port
+  port: "6379"
+  # Database id
+  dbid: 0
+  # Redis client connection pool size
+  connection_limit: 512
+graphite:
+  # If true, graphite sender will be enabled.
+  enabled: true
+  # If true, runtime stats will be captured and sent to graphite. Note: It takes to call stoptheworld() with configured "graphite.interval" to capture runtime stats (https://golang.org/src/runtime/mstats.go)
+  runtime_stats: false
+  # Graphite relay URI, format: ip:port
+  uri: "relay:2003"
+  # Moira metrics prefix. Use 'prefix: {hostname}' to use hostname autoresolver.
+  prefix: moira
+  # Metrics sending interval
+  interval: 60s
+notifier:
+  # Soft timeout to start retrying to send notification after single failed attempt
+  sender_timeout: 10s
+  # Hard timeout to stop retrying to send notification after multiple failed attempts
+  resending_timeout: "1:00"
+  # Web-UI uri prefix for trigger links in notifications. For example: with 'http://localhost' every notification will contain link like 'http://localhost/trigger/triggerId'
+  front_uri: "http://http://142.135.213.33:8083"
+  # Timezone to use to convert ticks. Default is UTC. See https://golang.org/pkg/time/#LoadLocation for more details.
+  timezone: UTC
+  # Format for email sender. Default is "15:04 02.01.2006". See https://golang.org/pkg/time/#Time.Format for more details about golang time formatting.
+  date_time_format: "15:04 02.01.2006"
+  # List of senders, every element has "type" field (one of ["pushover", "slack", "mail", "telegram", "twilio sms", "twilio voice", "script"])
+  # Every type of sender has additional config fields
+  senders:
+    - type: slack
+      # Api token for your moira notifications slack user, for more info see https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens
+      api_token: xoxp-651752934757-645428458529-640360960115-6e4ec1baa884f40499ede56c38fa2781
+      # If true, notification will be sent with state-specific icon, for more info see https://moira.readthedocs.io/en/latest/installation/configuration.html#slack-icons.
+      use_emoji: true
+  # Self state monitor configuration section. Note: No inner subscriptions is required. Moira will use its notification mechanism to send messages.
+  moira_selfstate:
+    enabled: true
+    # If true, Moira selfstate will check remote triggers checker works properly and notify admin if remote checker fails
+    # See https://moira.readthedocs.io/en/latest/installation/configuration.html#remote-triggers-checker for futher information
+    remote_triggers_enabled: false
+    # Max Redis disconnect delay to send alert when reached
+    redis_disconect_delay: 60s
+    # Max Filter metrics receive delay to send alert when reached
+    last_metric_received_delay: 120s
+    # Max Checker checks perform delay to send alert when reached
+    last_check_delay: 120s
+    # Max Remote triggers Checker checks perform delay to send alert when reached
+    # See https://moira.readthedocs.io/en/latest/installation/configuration.html#remote-triggers-checker for futher information
+    last_remote_check_delay: 300s
+    # Self state monitor alerting interval
+    notice_interval: 300s
+    # Contact list for Self state monitor alerts, use this like delivery channels in web-ui
+    contacts:
+      - type: mail
+        value: devopsteam@example.com
+log:
+  log_file: stdout
+  log_level: info

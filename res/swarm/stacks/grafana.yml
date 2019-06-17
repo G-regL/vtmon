@@ -15,7 +15,7 @@ services:
       - graphite-net
     environment:
       - GF_SERVER_ROOT_URL=http://${HOSTIPFQDN}/grafana/
-      - GF_INSTALL_PLUGINS=yesoreyeram-boomtable-panel,petrslavotinek-carpetplot-panel,vonage-status-panel,flant-statusmap-panel
+      - GF_INSTALL_PLUGINS=yesoreyeram-boomtable-panel,petrslavotinek-carpetplot-panel,vonage-status-panel,flant-statusmap-panel,grafana-piechart-panel
     deploy:
       mode: replicated
       replicas: 1

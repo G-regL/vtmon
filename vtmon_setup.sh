@@ -205,7 +205,7 @@ echo
 
 # Setup some networks
 echo " Create Swarm networks"
-for net in traefik-net graphite-net; do
+for net in traefik-net graphite-net graphhouse-net; do
   echo "${SPACE} $net"
   docker network create --driver overlay --attachable $net >> /dev/null
   echo "${CHECK} $net"
@@ -220,11 +220,12 @@ echo " Make persistent storage"
 make_persistant_storage /opt/docker/stack.Portainer/service.portainer
 
 echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/portainer.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images $(cat res/swarm/stacks/portainer.yml | grep image | awk -F\  '{print $2}' | uniq)
 
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
+
 
 
 echo " Set up Portainer"
@@ -261,10 +262,10 @@ echo " Make persistent storage"
 make_persistant_storage /opt/docker/stack.Traefik/service.traefik/logs
 
 echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Traefik_*)
+create_swarm_configs $(ls res/swarm/configs/traefik/*)
 
 echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/traefik.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images $(cat res/swarm/stacks/traefik.yml | grep image | awk -F\  '{print $2}' | uniq)
 
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -283,55 +284,111 @@ read -p "Hit ENTER to continue"
 echo
 
 
-# Deploy Graphite, using the Portainer API
-echo "Deploy Graphite"
+# Deploy GraphHouse (Clickhouse + Graphite), using the Portainer API
+echo "Deploy GraphHouse"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/
-
-chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
-### Set some system options to optimize it for Graphite
-echo " Tuning host system"
-### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS
-### block size (4KB) per metric.
-echo "${SPACE} Set vm.dirty_ratio"
-echo "vm.dirty_ratio=50" >> /etc/sysctl.d/10-graphite.conf
-echo "${CHECK} Set vm.dirty_ratio"
-
-### percentage of yout RAM when background writer have to kick in and start writes to disk. Make it way above the value
-### you see in `/proc/meminfo|grep Dirty` so that it doesn't interefere with dirty_expire_centisecs explained below
-echo "${SPACE} Set vm.dirty_background_ratio"
-echo "vm.dirty_background_ratio=50" >> /etc/sysctl.d/10-graphite.conf
-echo "${CHECK} Set vm.dirty_background_ratio"
-
-### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
-echo "${SPACE} Set vm.dirty_expire_centisecs"
-echo "vm.dirty_expire_centisecs=6000" >> /etc/sysctl.d/10-graphite.conf
-echo "${CHECK} Set vm.dirty_expire_centisecs"
-
-echo "${SPACE} Apply settings"
-sysctl --system >> /dev/null
-echo "${CHECK} Apply settings"
+make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/ /opt/docker/stack.GraphHouse/service.clickhouse/metadata /opt/docker/stack.GraphHouse/service.carbon-clickhouse
 
 echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Graphite_*)
+create_swarm_configs $(ls res/swarm/configs/graphhouse/*)
 
 echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)
+pull_docker_images $(cat res/swarm/stacks/graphhouse.yml | grep image | awk -F\  '{print $2}' | uniq)
 
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
     -H "accept: application/json" \
     -H "Content-Type: multipart/form-data" \
-    -F Name=Graphite \
+    -F Name=GraphHouse \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
-    -F file=@res/swarm/stacks/graphite.yml 2&> /dev/null
+    -F file=@res/swarm/stacks/graphhouse.yml 2&> /dev/null
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
-wait_for_service "[ \`docker service ls | grep Graphite | awk '{print \$4}' |grep '1/1' |wc -l\` -eq '3' ]"
+wait_for_service "[ \`docker service ls | grep GraphHouse | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '6' ]"
 echo "DONE"
 read -p "Hit ENTER to continue"
 echo
+
+
+# Deploy Moira, using the Portainer API
+echo "Deploy Moira"
+echo " Make persistent storage"
+make_persistant_storage /opt/docker/stack.moira/service.redis/data
+
+echo " Create Docker Swarm config files"
+create_swarm_configs $(ls res/swarm/configs/moira/*)
+
+echo " Pull Docker images"
+pull_docker_images $(cat res/swarm/stacks/moira.yml | grep image | awk -F\  '{print $2}' | uniq)
+
+echo " Deploy the stack"
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+    -H "Authorization: Bearer $portAuthToken" \
+    -H "accept: application/json" \
+    -H "Content-Type: multipart/form-data" \
+    -F Name=Moira \
+    -F EndpointID=${portEndpointID} \
+    -F SwarmID=${portSwarmID} \
+    -F file=@res/swarm/stacks/moira.yml 2&> /dev/null
+#stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
+wait_for_service "[ \`docker service ls | grep Moira | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '7' ]"
+echo "DONE"
+read -p "Hit ENTER to continue"
+echo
+
+####### Deploy Graphite, using the Portainer API
+######echo "Deploy Graphite"
+######echo " Make persistent storage"
+######make_persistant_storage /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/
+######
+######chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
+######### Set some system options to optimize it for Graphite
+######echo " Tuning host system"
+######### Percentage of your RAM which can be left unwritten to disk. MUST be much more than your write rate, which is usually one FS
+######### block size (4KB) per metric.
+######echo "${SPACE} Set vm.dirty_ratio"
+######echo "vm.dirty_ratio=50" >> /etc/sysctl.d/10-graphite.conf
+######echo "${CHECK} Set vm.dirty_ratio"
+######
+######### percentage of yout RAM when background writer have to kick in and start writes to disk. Make it way above the value
+######### you see in `/proc/meminfo|grep Dirty` so that it doesn't interefere with dirty_expire_centisecs explained below
+######echo "${SPACE} Set vm.dirty_background_ratio"
+######echo "vm.dirty_background_ratio=50" >> /etc/sysctl.d/10-graphite.conf
+######echo "${CHECK} Set vm.dirty_background_ratio"
+######
+######### allow page to be left dirty no longer than 10 mins if unwritten page stays longer than time set here, kernel starts writing it out
+######echo "${SPACE} Set vm.dirty_expire_centisecs"
+######echo "vm.dirty_expire_centisecs=6000" >> /etc/sysctl.d/10-graphite.conf
+######echo "${CHECK} Set vm.dirty_expire_centisecs"
+######
+######echo "${SPACE} Apply settings"
+######sysctl --system >> /dev/null
+######echo "${CHECK} Apply settings"
+######
+######echo " Create Docker Swarm config files"
+######create_swarm_configs $(ls res/swarm/configs/graphite/*)
+######
+######echo " Pull Docker images"
+######pull_docker_images $(cat res/swarm/stacks/graphite.yml |grep image |awk -F\  '{print $2}' |uniq)
+######
+######echo " Deploy the stack"
+######curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+######    -H "Authorization: Bearer $portAuthToken" \
+######    -H "accept: application/json" \
+######    -H "Content-Type: multipart/form-data" \
+######    -F Name=Graphite \
+######    -F EndpointID=${portEndpointID} \
+######    -F SwarmID=${portSwarmID} \
+######    -F file=@res/swarm/stacks/graphite.yml 2&> /dev/null
+#######stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
+######wait_for_service "[ \`docker service ls | grep Graphite | awk '{print \$4}' |grep '1/1' |wc -l\` -eq '3' ]"
+######echo "DONE"
+######read -p "Hit ENTER to continue"
+######echo
+
+
+
 
 
 # Deploy Grafana, using the Portainer API
@@ -404,7 +461,7 @@ echo
 # Deploy Telegraf, using the Portainer API
 echo "Deploy Telegraf"
 echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/Telegraf_*)
+create_swarm_configs $(ls res/swarm/configs/telegraf/*)
 
 echo " Pull Docker images"
 pull_docker_images $(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)
@@ -426,13 +483,19 @@ stack_services=`cat res/swarm/stacks/telegraf.yml |grep replicas |grep -v 0 |wc 
 wait_for_service "[ \`docker service ls | grep Telegraf |awk '{print \$4}' |grep '1/1' |wc -l\` -eq '${stack_services}' ]"
 
 echo "DONE"
+read -p "Hit ENTER to continue"
+echo
 
 echo
 echo "VTMon is now deployed and ready to go!"
 echo
 echo "Please visit Grafana at http://${ipfqdn}/grafana/, and login with admin:${adminPass}."
+echo 
+echo "You can also visit Moira at http://${ipfqdn}:8083 to setup alerts."
+echo "Extra steps will be required to enable email/Slack notifications."
 echo
 echo "Should you want/need to check on the status of the system, you can use the following URLs"
-echo "  Portainer (Container manager) - http://${ipfqdn}/poratiner/"
-echo "  Traefik (Load balancer)       - http://${ipfqdn}:8080/dashboard/"
+echo "  Portainer (Container manager)     - http://${ipfqdn}/portainer/"
+echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
+echo "  Tabix (Metrics management GUI)    - http://${ipfqdn}:8081/"
 echo

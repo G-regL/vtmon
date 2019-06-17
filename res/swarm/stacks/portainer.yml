@@ -21,7 +21,7 @@ services:
 
   portainer:
     image: portainer/portainer:1.20.2
-    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    command: -H tcp://tasks.agent:9001 --tlsskipverify --no-analytics
     ports:
       - "9000:9000"
     volumes:

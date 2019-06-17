@@ -1,0 +1,120 @@
+version: "3.6"
+
+services:
+  clickhouse:
+    image: yandex/clickhouse-server:19.6.2.11
+    deploy:
+      mode: replicated
+      replicas: 1
+    configs:
+      - source: GraphHouse_clickhouse_rollup.xml-20190530.1049
+        target: /etc/clickhouse-server/config.d/rollup.xml
+      - source: GraphHouse_clickhouse-init.sql-20190530.1000
+        target: /docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 8123:8123
+    volumes:
+      - /opt/docker/stack.GraphHouse/service.clickhouse/data:/var/lib/clickhouse/data
+      - /opt/docker/stack.GraphHouse/service.clickhouse/metadata:/var/lib/clickhouse/metadata
+    networks:
+      - graphhouse-net
+
+  carbon:
+    image: lomik/carbon-clickhouse:v0.10.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    configs: 
+      - source: GraphHouse_carbon_carbon-clickhouse.conf-20190530.1000
+        target: /etc/carbon-clickhouse/carbon-clickhouse.conf
+    volumes:
+      - /opt/docker/stack.GraphHouse/service.carbon:/data/carbon-clickhouse
+    depends_on:
+      - clickhouse
+    networks:
+      graphhouse-net:
+        aliases:
+         - carbon-clickhouse
+
+
+  graphite:
+    image: lomik/graphite-clickhouse:v0.9.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    configs: 
+      - source: GraphHouse_graphite_graphite-clickhouse.conf-20190530.1000
+        target: /etc/graphite-clickhouse/graphite-clickhouse.conf
+    depends_on:
+      - clickhouse
+    networks:
+      graphhouse-net:
+        aliases:
+         - graphite-clickhouse
+
+
+  api:
+    image: openmetric/carbonapi:0.11.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    configs:
+      - source: GraphHouse_carbonapi_api.yaml-20190530.1000
+        target: /openmetric/conf/api.yaml
+    depends_on:
+      - graphite
+    networks:
+      - graphhouse-net
+  
+
+  relay:
+    image: openmetric/carbon-c-relay:v3.5
+    deploy:
+      mode: replicated
+      replicas: 1
+    command: carbon-c-relay -f /openmetric/conf/relay.conf -c -_:#@%$$|
+    configs:
+      - source: GraphHouse_carbonrelay_relay.conf-20190606.0803
+        target: /openmetric/conf/relay.conf
+    ports:
+      - "2003:2003"
+    depends_on:
+      - carbon
+    networks:
+      - graphhouse-net
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client
+    deploy:
+      mode: replicated
+      replicas: 1
+#      labels:
+#        - "traefik.enable=true"
+#        - "traefik.frontend.rule=PathPrefixStrip:/tabix/"
+#        - "traefik.port=80"
+    ports:
+      - 8081:80
+    networks:
+      - graphhouse-net
+      - traefik-net
+    
+      
+configs:
+  GraphHouse_clickhouse_rollup.xml-20190530.1049:
+    external: true
+  GraphHouse_clickhouse_init.sql-20190530.1000:
+    external: true
+  GraphHouse_carbon_carbon-clickhouse.conf-20190530.1000:
+    external: true
+  GraphHouse_graphite_graphite-clickhouse.conf-20190530.1000:
+    external: true
+  GraphHouse_carbonapi_api.yaml-20190530.1000: 
+    external: true
+  GraphHouse_carbonrelay_relay.conf-20190606.0803:
+    external: true
+  
+networks:
+  graphhouse-net:
+    external: true
+  traefik-net:
+    external: true

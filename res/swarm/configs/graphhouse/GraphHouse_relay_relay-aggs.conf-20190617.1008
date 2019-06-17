@@ -1,0 +1,175 @@
+#### Host CPU
+
+aggregate
+  #          vc       dc       clu            host          metric    
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.cpu\.(demand_average|readiness_average|totalCapacity_average|usagemhz_average)$
+  every 60s
+  expire after 65s
+  timestamp at start of bucket
+  compute sum write to
+    vsphere.\1.\2.\3._total.host.cpu.sum.\5
+  compute average write to
+    vsphere.\1.\2.\3._total.host.cpu.avg.\5
+
+  compute sum write to
+    vsphere.\1.\2._total.host.cpu.sum.\5
+  compute average write to
+    vsphere.\1.\2._total.host.cpu.avg.\5
+
+  compute sum write to  
+    vsphere.\1._total.host.cpu.sum.\5
+  compute average write to
+    vsphere.\1._total.host.cpu.avg.\5
+
+  compute sum write to
+    vsphere._total.host.cpu.sum.\5
+  compute average write to
+    vsphere._total.host.cpu.avg.\5
+  send to default
+  stop 
+;
+
+
+##### Host Disk
+aggregate
+# mb        vc       dc       clu            host           disk
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.disk\.(?![^.]*instance_total)\.(commandsAveraged_average|numberReadAveraged_average|numberWriteAveraged_average|usage_average|read_average|write_average|totalLatency_average|totalReadLatency_average|totalWriteLatency_average)$
+# io        vc       dc       clu            host           disk
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.disk\.(?![^.]*instance_total)\.(usage_average|read_average|write_average)$
+# lat       vc       dc       clu            host           disk
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.disk\.(?![^.]*instance_total)\.(totalLatency_average|totalReadLatency_average|totalWriteLatency_average)$
+  every 60s
+  expire after 65s
+  compute sum write to
+    vsphere.\1.\2.\3._total.host.disk.sum.\5
+  compute average write to
+    vsphere.\1.\2.\3._total.host.disk.avg.\5
+
+  compute sum write to
+    vsphere.\1.\2._total.host.disk.sum.\5
+  compute average write to
+    vsphere.\1.\2._total.host.disk.avg.\5
+
+  compute sum write to  
+    vsphere.\1._total.host.disk.sum.\5
+  compute average write to
+    vsphere.\1._total.host.disk.avg.\5
+
+  compute sum write to
+    vsphere._total.host.disk.sum.\5
+  compute average write to
+    vsphere._total.host.disk.avg.\5
+  send to default
+  stop
+;
+
+##### Host Memory
+aggregate
+# mb        vc       dc       clu            host           
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.mem\.(active_average|granted_average|totalCapacity_average|usage_average)$
+  every 60s
+  expire after 65s
+  compute sum write to
+      vsphere.\1.\2.\3._total.host.mem.sum.\5
+    compute average write to
+      vsphere.\1.\2.\3._total.host.mem.avg.\5
+
+  compute sum write to
+    vsphere.\1.\2._total.host.mem.sum.\5
+  compute average write to
+    vsphere.\1.\2._total.host.mem.avg.\5
+
+  compute sum write to  
+    vsphere.\1._total.host.mem.sum.\5
+  compute average write to
+    vsphere.\1._total.host.mem.avg.\5
+
+  compute sum write to
+    vsphere._total.host.mem.sum.\5
+  compute average write to
+    vsphere._total.host.mem.avg.\5
+  send to default
+  stop
+;
+
+##### Host Network
+aggregate
+# errors    vc       dc       clu            host           
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.net\.instance-total\.(droppedRx_summation|droppedTx_summation|errorsRx_summation|errorsTx_summation)$
+# pack/kb   vc       dc       clu            host           
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.net\.instance-total\.(packetsRx_summation|packetsTx_summation|bytesRx_average|bytesTx_average)$
+
+  every 60s
+  expire after 65s
+  compute sum write to
+    vsphere.\1.\2.\3._total.host.net.sum.\5
+  compute average write to
+    vsphere.\1.\2.\3._total.host.net.avg.\5
+  compute max write to
+    vsphere.\1.\2.\3._total.host.net.max.\5
+  compute min write to
+    vsphere.\1.\2.\3._total.host.net.min.\5
+
+  compute sum write to
+    vsphere.\1.\2._total.host.net.sum.\5
+  compute average write to
+    vsphere.\1.\2._total.host.net.avg.\5
+  compute max write to
+    vsphere.\1.\2._total.host.net.max.\5
+  compute min write to
+    vsphere.\1.\2._total.host.net.min.\5
+
+  compute sum write to  
+    vsphere.\1._total.host.net.sum.\5
+  compute average write to
+    vsphere.\1._total.host.net.avg.\5
+  compute max write to  
+    vsphere.\1._total.host.net.max.\5
+  compute min write to
+    vsphere.\1._total.host.net.min.\5
+
+  compute sum write to
+    vsphere._total.host.net.sum.\5
+  compute average write to
+    vsphere._total.host.net.avg.\5
+  compute max write to
+    vsphere._total.host.net.max.\5
+  compute min write to
+    vsphere._total.host.net.min.\5
+  send to default
+  stop
+;
+
+##### Datastore
+aggregate
+# errors    vc       dc                  ds           
+  ^vsphere\.([^.]+)\.([^.]+)\.datastore\.([^.]+)\.(droppedRx_summation|droppedTx_summation|errorsRx_summation|errorsTx_summation)$
+# pack/kb   vc       dc       clu            host           
+  ^vsphere\.([^.]+)\.([^.]+)\.([^.]+)\.host\.([^.]+)\.net\.instance-total\.(packetsRx_summation|packetsTx_summation|bytesRx_average|bytesTx_average)$
+
+  every 60s
+  expire after 65s
+
+  compute sum write to
+    vsphere.\1.\2._total.datastore.sum.\4
+  compute max write to
+    vsphere.\1.\2._total.datastore.max.\4
+  compute min write to
+    vsphere.\1.\2._total.datastore.min.\4
+
+  compute sum write to  
+    vsphere.\1._total.datastore.sum.\4
+  compute max write to  
+    vsphere.\1._total.datastore.max.\4
+  compute max write to  
+    vsphere.\1._total.datastore.min.\4
+
+  compute sum write to
+    vsphere._total.datastore.sum.\4
+  compute max write to
+    vsphere._total.datastore.max.\4
+  compute min write to
+    vsphere._total.datastore.min.\4
+  send to default
+  stop
+;

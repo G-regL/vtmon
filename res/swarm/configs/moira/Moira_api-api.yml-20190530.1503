@@ -1,0 +1,36 @@
+# Use fields MasterName and SentinelAddrs to enable Redis Sentinel support,
+# use Host and Port fields otherwise.
+redis:
+  # Sentinel cluster name
+  master_name: ""
+  # Sentinel address list, format: {host1_name:port};{ip:port}
+  sentinel_addrs: ""
+  # Node ip-address or host name
+  host: "redis"
+  # Node port
+  port: "6379"
+  # Database id
+  dbid: 0
+  # Redis client connection pool size
+  connection_limit: 512
+graphite:
+  # If true, graphite sender will be enabled.
+  enabled: true
+  # If true, runtime stats will be captured and sent to graphite. Note: It takes to call stoptheworld() with configured "graphite.interval" to capture runtime stats (https://golang.org/src/runtime/mstats.go)
+  runtime_stats: false
+  # Graphite relay URI, format: ip:port
+  uri: "relay:2003"
+  # Moira metrics prefix. Use 'prefix: {hostname}' to use hostname autoresolver.
+  prefix: moira
+  # Metrics sending interval
+  interval: 60s
+api:
+  # Api local network address. Default is ':8081' so api will be available at http://moira.company.com:8081/api
+  listen: ":8081"
+  # If true, CORS for cross-domain requests will be enabled. This option can be used only for debugging purposes.
+  enable_cors: false
+  # Web_UI config file path. If file not found, api will return 404 in response to "api/config"
+  web_config_path: "/etc/moira/web.json"
+log:
+  log_file: stdout
+  log_level: info
