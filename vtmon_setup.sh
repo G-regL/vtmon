@@ -303,6 +303,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Name=GraphHouse \
     -F EndpointID=${portEndpointID} \
     -F SwarmID=${portSwarmID} \
+    -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
     -F file=@res/swarm/stacks/graphhouse.yml 2&> /dev/null
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
 wait_for_service "[ \`docker service ls | grep GraphHouse | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '6' ]"

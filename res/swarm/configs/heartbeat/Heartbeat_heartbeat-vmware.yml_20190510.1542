@@ -1,0 +1,81 @@
+heartbeat.monitors:
+- type: http
+  name: vCenter
+  schedule: '@every 10s'
+  ssl:
+    verification_mode: none
+  urls:
+    - https://vcenter.int.ec.gc.ca
+    - https://vcenter.int.ec.gc.ca/ui/
+    - https://vcenter.int.ec.gc.ca/vsphere-client/
+
+- type: http
+  name: vROps
+  schedule: '@every 10s'
+  ssl:
+    verification_mode: none
+  urls:
+    - https://vrops.ncr.int.ec.gc.ca
+
+- type: icmp
+  name: 'ESXi Hosts - NCRVMCL'
+  schedule: '@every 10s'
+  hosts:
+    - ncrvm29.ncr.int.ec.gc.ca
+    - ncrvm30.ncr.int.ec.gc.ca
+    - ncrvm31.ncr.int.ec.gc.ca
+    - ncrvm32.ncr.int.ec.gc.ca
+    - ncrvm33.ncr.int.ec.gc.ca
+    - ncrvm34.ncr.int.ec.gc.ca
+    - ncrvm35.ncr.int.ec.gc.ca
+    - ncrvm36.ncr.int.ec.gc.ca
+    
+- type: icmp
+  name: 'ESXi Hosts - NCRVMCL STAGE'
+  schedule: '@every 10s'
+  hosts:    
+    - ncrvm37.ncr.int.ec.gc.ca
+    - ncrvm38.ncr.int.ec.gc.ca
+
+- type: icmp
+  name: 'ESXi Hosts - NCRVMCL DMZ'
+  schedule: '@every 10s'
+  hosts:    
+    - ncrvmdmz1.ncr.int.ec.gc.ca
+    - ncrvmdmz2.ncr.int.ec.gc.ca
+    - ncrvmdmz3.ncr.int.ec.gc.ca
+    - ncrvmdmz4.ncr.int.ec.gc.ca
+
+- type: icmp
+  name: 'ESXi Hosts - ONTVMCL'
+  schedule: '@every 10s'
+  hosts:    
+    - dowvm1.ontario.int.ec.gc.ca
+    - dowvm2.ontario.int.ec.gc.ca
+    - dowvm3.ontario.int.ec.gc.ca
+
+- type: icmp
+  name: 'ESXi Hosts - DOWVMGIS'
+  schedule: '@every 10s'
+  hosts:    
+    - dowvmgis5.ontario.int.ec.gc.ca
+    - dowvmgis6.ontario.int.ec.gc.ca
+    - dowvmgis7.ontario.int.ec.gc.ca
+    - dowvmgis8.ontario.int.ec.gc.ca
+
+- type: icmp
+  name: 'ESXi Hosts - BONVMCL'
+  schedule: '@every 10s'
+  hosts:    
+    - bonvm1.quebec.int.ec.gc.ca
+    - bonvm2.quebec.int.ec.gc.ca
+
+#processors:
+#- add_cloud_metadata: ~
+
+output.elasticsearch:
+  hosts: 'http://elasticsearch:9200'
+  
+xpack.monitoring.enabled: true
+#xpack.monitoring.elasticsearch: 
+#  hosts: ["elasticsearch:9200"]

@@ -1,0 +1,44 @@
+version: "3.6"
+
+services:
+  vcsa:
+    image: docker.elastic.co/logstash/logstash:7.0.1
+    deploy:
+      mode: replicated
+      replicas: 0
+#      update_config:
+#        order: stop-first
+    ports:
+      - 1514:12345/tcp
+      - 1514:12345/udp
+    environment:
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.elasticsearch.hosts=http://elastic:9200
+      - node.name=ls-vsca
+      - pipeline.id=vsca
+      - path.config=/usr/share/logstash/pipeline
+      #- log.level=debug
+      #- config.debug=true
+    configs:
+      - source: Logstash_VCSA-pipeline_vcsa.yml-20190517.1238
+        target: /usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - elastic-net
+    volumes:
+      - "vcsa:/usr/share/logstash/data/"
+    healthcheck:
+      test: "curl -fsSL -o /dev/null http://localhost:9600"
+      interval: 30s
+      timeout: 2s
+      retries: 3
+
+configs:
+  Logstash_VCSA-pipeline_vcsa.yml-20190517.1238:
+    external: true
+
+networks:
+  elastic-net:
+    external: true
+    
+volumes:
+  vcsa:

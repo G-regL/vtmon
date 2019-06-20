@@ -85,6 +85,10 @@ services:
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client
+    environment:
+      - CH_NAME=GraphHouse
+      - CH_HOST=${HOSTIPFQDN}
+      - CH_LOGIN=default
     deploy:
       mode: replicated
       replicas: 1
