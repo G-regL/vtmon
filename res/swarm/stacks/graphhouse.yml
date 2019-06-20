@@ -7,7 +7,7 @@ services:
       mode: replicated
       replicas: 1
     configs:
-      - source: GraphHouse_clickhouse_rollup.xml-20190530.1049
+      - source: GraphHouse_clickhouse-rollup.xml-20190530.1049
         target: /etc/clickhouse-server/config.d/rollup.xml
       - source: GraphHouse_clickhouse-init.sql-20190530.1000
         target: /docker-entrypoint-initdb.d/init.sql
@@ -25,7 +25,7 @@ services:
       mode: replicated
       replicas: 1
     configs: 
-      - source: GraphHouse_carbon_carbon-clickhouse.conf-20190530.1000
+      - source: GraphHouse_carbon-carbon-clickhouse.conf-20190530.1000
         target: /etc/carbon-clickhouse/carbon-clickhouse.conf
     volumes:
       - /opt/docker/stack.GraphHouse/service.carbon:/data/carbon-clickhouse
@@ -43,7 +43,7 @@ services:
       mode: replicated
       replicas: 1
     configs: 
-      - source: GraphHouse_graphite_graphite-clickhouse.conf-20190530.1000
+      - source: GraphHouse_graphite-graphite-clickhouse.conf-20190530.1000
         target: /etc/graphite-clickhouse/graphite-clickhouse.conf
     depends_on:
       - clickhouse
@@ -59,12 +59,14 @@ services:
       mode: replicated
       replicas: 1
     configs:
-      - source: GraphHouse_carbonapi_api.yaml-20190530.1000
+      - source: GraphHouse_api-api.yaml-20190530.1000
         target: /openmetric/conf/api.yaml
     depends_on:
       - graphite
     networks:
-      - graphhouse-net
+      graphhouse-net:
+        aliases:
+         - carbonapi
   
 
   relay:
@@ -74,14 +76,16 @@ services:
       replicas: 1
     command: carbon-c-relay -f /openmetric/conf/relay.conf -c -_:#@%$$|
     configs:
-      - source: GraphHouse_carbonrelay_relay.conf-20190606.0803
+      - source: GraphHouse_relay_relay.conf-20190606.0803
         target: /openmetric/conf/relay.conf
     ports:
       - "2003:2003"
     depends_on:
       - carbon
     networks:
-      - graphhouse-net
+      graphhouse-net:
+        aliases:
+          - carbon-c-relay
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client
@@ -104,17 +108,17 @@ services:
     
       
 configs:
-  GraphHouse_clickhouse_rollup.xml-20190530.1049:
+  GraphHouse_clickhouse-rollup.xml-20190530.1049:
     external: true
-  GraphHouse_clickhouse_init.sql-20190530.1000:
+  GraphHouse_clickhouse-init.sql-20190530.1000:
     external: true
-  GraphHouse_carbon_carbon-clickhouse.conf-20190530.1000:
+  GraphHouse_carbon-carbon-clickhouse.conf-20190530.1000:
     external: true
-  GraphHouse_graphite_graphite-clickhouse.conf-20190530.1000:
+  GraphHouse_graphite-graphite-clickhouse.conf-20190530.1000:
     external: true
-  GraphHouse_carbonapi_api.yaml-20190530.1000: 
+  GraphHouse_api-api.yaml-20190530.1000: 
     external: true
-  GraphHouse_carbonrelay_relay.conf-20190606.0803:
+  GraphHouse_relay_relay.conf-20190606.0803:
     external: true
   
 networks:
