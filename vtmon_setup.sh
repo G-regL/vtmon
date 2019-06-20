@@ -30,11 +30,15 @@ function create_swarm_configs () {
 }
 
 function make_persistant_storage () {
-  for dir in $*; do
-    echo "${SPACE} $dir"
-    mkdir -p $dir >> /dev/null
-    echo "${CHECK} $dir"
-  done
+  dir=$1
+  perms=$2
+  echo "${SPACE} $dir"
+  mkdir -p $dir >> /dev/null
+  if [ "$perms" != "" ]; then
+    chown -R $perms $dir
+  fi
+  echo "${CHECK} $dir"
+  
 }
 
 function wait_for_service () {
@@ -287,7 +291,9 @@ echo
 # Deploy GraphHouse (Clickhouse + Graphite), using the Portainer API
 echo "Deploy GraphHouse"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/ /opt/docker/stack.GraphHouse/service.clickhouse/metadata /opt/docker/stack.GraphHouse/service.carbon-clickhouse
+make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/
+make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/metadata
+make_persistant_storage /opt/docker/stack.GraphHouse/service.carbon
 
 echo " Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/graphhouse/*)
@@ -341,7 +347,9 @@ echo
 ####### Deploy Graphite, using the Portainer API
 ######echo "Deploy Graphite"
 ######echo " Make persistent storage"
-######make_persistant_storage /opt/docker/stack.graphite/service.relay/ /opt/docker/stack.graphite/service.carbon/whisper/ /opt/docker/stack.graphite/service.api/
+######make_persistant_storage /opt/docker/stack.graphite/service.relay/
+######make_persistant_storage /opt/docker/stack.graphite/service.carbon/whisper/
+######make_persistant_storage /opt/docker/stack.graphite/service.api/
 ######
 ######chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ######### Set some system options to optimize it for Graphite
@@ -395,8 +403,8 @@ echo
 # Deploy Grafana, using the Portainer API
 echo "Deploy Grafana"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.grafana/service.grafana/data/
-chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
+make_persistant_storage /opt/docker/stack.grafana/service.grafana/data/ 472:472
+#chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 
 echo " Pull Docker images"
 pull_docker_images $(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)
