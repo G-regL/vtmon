@@ -29,7 +29,7 @@ function create_swarm_configs () {
   done
 }
 
-function make_persistant_storage () {
+function make_persistent_storage () {
   dir=$1
   perms=$2
   echo "${SPACE} $dir"
@@ -221,7 +221,7 @@ echo
 # Deploy Portainer, using the command-line
 echo "Deploy Portainer"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.Portainer/service.portainer
+make_persistent_storage /opt/docker/stack.Portainer/service.portainer
 
 echo " Pull Docker images"
 pull_docker_images $(cat res/swarm/stacks/portainer.yml | grep image | awk -F\  '{print $2}' | uniq)
@@ -263,7 +263,7 @@ echo
 # Deploy Traefik, using the Portainer API
 echo "Deploy Traefik"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.Traefik/service.traefik/logs
+make_persistent_storage /opt/docker/stack.Traefik/service.traefik/logs
 
 echo " Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/traefik/*)
@@ -291,9 +291,9 @@ echo
 # Deploy GraphHouse (Clickhouse + Graphite), using the Portainer API
 echo "Deploy GraphHouse"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/
-make_persistant_storage /opt/docker/stack.GraphHouse/service.clickhouse/metadata
-make_persistant_storage /opt/docker/stack.GraphHouse/service.carbon
+make_persistent_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/
+make_persistent_storage /opt/docker/stack.GraphHouse/service.clickhouse/metadata
+make_persistent_storage /opt/docker/stack.GraphHouse/service.carbon
 
 echo " Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/graphhouse/*)
@@ -321,7 +321,7 @@ echo
 # Deploy Moira, using the Portainer API
 echo "Deploy Moira"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.moira/service.redis/data
+make_persistent_storage /opt/docker/stack.moira/service.redis/data
 
 echo " Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/moira/*)
@@ -347,9 +347,9 @@ echo
 ####### Deploy Graphite, using the Portainer API
 ######echo "Deploy Graphite"
 ######echo " Make persistent storage"
-######make_persistant_storage /opt/docker/stack.graphite/service.relay/
-######make_persistant_storage /opt/docker/stack.graphite/service.carbon/whisper/
-######make_persistant_storage /opt/docker/stack.graphite/service.api/
+######make_persistent_storage /opt/docker/stack.graphite/service.relay/
+######make_persistent_storage /opt/docker/stack.graphite/service.carbon/whisper/
+######make_persistent_storage /opt/docker/stack.graphite/service.api/
 ######
 ######chown -R 990:990 /opt/docker/stack.graphite/service.carbon/whisper/
 ######### Set some system options to optimize it for Graphite
@@ -403,7 +403,7 @@ echo
 # Deploy Grafana, using the Portainer API
 echo "Deploy Grafana"
 echo " Make persistent storage"
-make_persistant_storage /opt/docker/stack.grafana/service.grafana/data/ 472:472
+make_persistent_storage /opt/docker/stack.grafana/service.grafana/data/ 472:472
 #chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
 
 echo " Pull Docker images"
@@ -435,7 +435,7 @@ echo " Create datasources"
 echo "${SPACE} Graphite"
 curl -s -o /dev/null http://${ipfqdn}/grafana/api/datasources -X POST \
     -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
-    -d '{ "name":"Graphite", "type":"graphite", "url":"http://Graphite_api:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'
+    -d '{ "name":"Graphite", "type":"graphite", "url":"http://carbonapi:8080/", "access":"proxy","basicAuth": false, "isDefault": true}'
 echo "${CHECK} Graphite"
 
 # Create Grafana dashboards from the files inside res/grafana/*/*
