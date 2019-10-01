@@ -1,31 +1,6 @@
 version: "3.6"
 
 services:
-  redis:
-    image: redis:5.0.5-alpine
-    command: redis-server --appendonly yes
-    deploy:
-      mode: replicated
-      replicas: 1
-    volumes:
-      - /opt/docker/stack.moira/service.redis/data:/data
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    networks:
-      - default
-      - traefik-net
-    deploy:
-      mode: replicated
-      replicas: 0
-      labels:
-        - "traefik.enable=true"
-        - "traefik.frontend.rule=PathPrefixStrip:/moira-redis/"
-        - "traefik.port=8081"
-    environment:
-      - REDIS_HOSTS=local:redis:6379:0
-    
-
   filter:
     image: moira/filter
     depends_on:
@@ -38,6 +13,7 @@ services:
     networks:
       - default
       - graphhouse-net
+      - redis-net
     deploy:
       mode: replicated
       replicas: 1
@@ -45,11 +21,11 @@ services:
   checker:
     image: moira/checker
     depends_on:
-      - redis
       - filter
     networks:
       - default
       - graphhouse-net
+      - redis-net
     configs:
       - source: Moira_checker-checker.yml-20190530.1454
         target: /etc/moira/checker.yml
@@ -60,11 +36,11 @@ services:
   notifier:
     image: moira/notifier
     depends_on:
-      - redis
       - checker
     networks:
       - default
       - graphhouse-net
+      - redis-net
     deploy:
       mode: replicated
       replicas: 1
@@ -76,12 +52,12 @@ services:
   api:
     image: moira/api
     depends_on:
-      - redis
       - checker
     networks:
       - default
 #      - traefik-net
       - graphhouse-net
+      - redis-net
     configs:
       - source: Moira_api-api.yml-20190530.1503
         target: /etc/moira/api.yml
@@ -148,4 +124,6 @@ networks:
   traefik-net:
     external: true
   graphhouse-net:
+    external: true
+  redis-net:
     external: true

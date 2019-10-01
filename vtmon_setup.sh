@@ -209,7 +209,7 @@ echo
 
 # Setup some networks
 echo " Create Swarm networks"
-for net in traefik-net graphite-net graphhouse-net; do
+for net in traefik-net graphhouse-net redis-net elastic-net; do
   echo "${SPACE} $net"
   docker network create --driver overlay --attachable $net >> /dev/null
   echo "${CHECK} $net"
@@ -319,9 +319,31 @@ echo
 
 
 # Deploy Moira, using the Portainer API
-echo "Deploy Moira"
+echo "Deploy Redis"
 echo " Make persistent storage"
-make_persistent_storage /opt/docker/stack.moira/service.redis/data
+make_persistent_storage /opt/docker/stack.redis/service.redis/data
+
+echo " Pull Docker images"
+pull_docker_images $(cat res/swarm/stacks/redis.yml | grep image | awk -F\  '{print $2}' | uniq)
+
+echo " Deploy the stack"
+curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
+    -H "Authorization: Bearer $portAuthToken" \
+    -H "accept: application/json" \
+    -H "Content-Type: multipart/form-data" \
+    -F Name=Redis \
+    -F EndpointID=${portEndpointID} \
+    -F SwarmID=${portSwarmID} \
+    -F file=@res/swarm/stacks/redis.yml 2&> /dev/null
+#stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
+wait_for_service "[ \`docker service ls | grep Redis | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '2' ]"
+echo "DONE"
+read -p "Hit ENTER to continue"
+echo
+
+
+# Deploy Moira, using the Portainer API
+echo "Deploy Moira"
 
 echo " Create Docker Swarm config files"
 create_swarm_configs $(ls res/swarm/configs/moira/*)
@@ -339,7 +361,7 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F SwarmID=${portSwarmID} \
     -F file=@res/swarm/stacks/moira.yml 2&> /dev/null
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
-wait_for_service "[ \`docker service ls | grep Moira | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '7' ]"
+wait_for_service "[ \`docker service ls | grep Moira | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '6' ]"
 echo "DONE"
 read -p "Hit ENTER to continue"
 echo

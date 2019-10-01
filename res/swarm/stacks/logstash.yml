@@ -2,25 +2,27 @@ version: "3.6"
 
 services:
   vcsa:
-    image: docker.elastic.co/logstash/logstash:7.0.1
+    image: docker.elastic.co/logstash/logstash:7.1.1
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
 #      update_config:
 #        order: stop-first
     ports:
       - 1514:12345/tcp
       - 1514:12345/udp
     environment:
-      - xpack.monitoring.enabled=true
-      - xpack.monitoring.elasticsearch.hosts=http://elastic:9200
-      - node.name=ls-vsca
-      - pipeline.id=vsca
-      - path.config=/usr/share/logstash/pipeline
+      xpack.monitoring.enabled: "true"
+      xpack.monitoring.elasticsearch.hosts: "http://elasticsearch01:9200"
+      xpack.monitoring.elasticsearch.username: "elastic "
+      xpack.monitoring.elasticsearch.password: "123456ab"
+      node.name: "vcsa"
+      pipeline.id: "vsca"
+      path.config: "/usr/share/logstash/pipeline"
       #- log.level=debug
       #- config.debug=true
     configs:
-      - source: Logstash_VCSA-pipeline_vcsa.yml-20190517.1238
+      - source: Logstash_vcsa-pipeline_vcsa.yml-20190815.1536
         target: /usr/share/logstash/pipeline/logstash.conf
     networks:
       - elastic-net
@@ -31,9 +33,96 @@ services:
       interval: 30s
       timeout: 2s
       retries: 3
+      start_period: 300s
+
+  esxi:
+    image: docker.elastic.co/logstash/logstash:7.1.1
+    deploy:
+      mode: replicated
+      replicas: 1
+#      update_config:
+#        order: stop-first
+    ports:
+      - 1515:12345/tcp
+      - 1515:12345/udp
+    environment:
+      xpack.monitoring.enabled: "true"
+      xpack.monitoring.elasticsearch.hosts: "http://elasticsearch01:9200"
+      xpack.monitoring.elasticsearch.username: "elastic "
+      xpack.monitoring.elasticsearch.password: "123456ab"
+      node.name: "esxi"
+      pipeline.id: "esxi"
+      path.config: "/usr/share/logstash/pipeline"
+      #- log.level=debug
+      #- config.debug=true
+    configs:
+      - source: Logstash_esxi-pipeline_esxi.yml-20190816.0900
+        target: /usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - elastic-net
+    volumes:
+      - "esxi:/usr/share/logstash/data/"
+    healthcheck:
+      test: "curl -fsSL -o /dev/null http://localhost:9600"
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 300s
+
+  elastiflow:
+    image: robcowart/elastiflow-logstash-oss:3.5.0_7.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+#      update_config:
+#        order: stop-first
+    ports:
+      #- 2055:2055/udp
+      #- 4739:4739/tcp
+      - 4739:4739/udp
+      
+    networks:
+      - elastic-net
+      
+    volumes:
+      - "elastiflow:/usr/share/logstash/data/"
+
+    environment:
+      #xpack.monitoring.enabled: "true"
+      #xpack.monitoring.elasticsearch.hosts: "http://elasticsearch01:9200"
+      #xpack.monitoring.elasticsearch.username: "elastic "
+      #xpack.monitoring.elasticsearch.password: "123456ab"
+      node.name: "elastiflow"
+      
+      # JVM Heap size - this MUST be at least 3GB (4GB preferred)
+      LS_JAVA_OPTS: '-Xms4g -Xmx4g'
+
+      # ElastiFlow global configuration
+      ELASTIFLOW_DEFAULT_APPID_SRCTYPE: "__UNKNOWN"
+
+      ELASTIFLOW_ES_HOST: "elasticsearch01:9200"
+      ELASTIFLOW_ES_USER: "elastic"
+      ELASTIFLOW_ES_PASSWD: "123456ab"
+
+      # Name resolution option
+      ELASTIFLOW_RESOLVE_IP2HOST: "true"
+      ELASTIFLOW_NAMESERVER: "142.135.209.146"
+
+      #ELASTIFLOW_NETFLOW_IPV4_PORT: 2055
+      #ELASTIFLOW_SFLOW_IPV4_PORT: 6343
+      ELASTIFLOW_IPFIX_TCP_IPV4_PORT: 4739
+      
+    healthcheck:
+      test: "curl -fsSL -o /dev/null http://localhost:9600"
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 600s
 
 configs:
-  Logstash_VCSA-pipeline_vcsa.yml-20190517.1238:
+  Logstash_vcsa-pipeline_vcsa.yml-20190815.1536:
+    external: true
+  Logstash_esxi-pipeline_esxi.yml-20190816.0900:
     external: true
 
 networks:
@@ -42,3 +131,5 @@ networks:
     
 volumes:
   vcsa:
+  esxi:
+  elastiflow:

@@ -1,0 +1,235 @@
+input {
+    tcp {
+        id => "esxi-input-tcp"
+        port => 12345
+        tags => [ "esxi", "vmware" ]
+    }
+
+}
+filter {
+        grok {
+            id => "esxi-filter-grok_main"
+            break_on_match => true
+            match => [
+                "message", "<%{POSINT:syslog_pri}>%{TIMESTAMP_ISO8601:syslog_timestamp} %{SYSLOGHOST:hostname} %{SYSLOGPROG:message_program}: (?<body_type_1>(?<message_body>(?<message_system_info>(?:\[%{DATA:message_thread_id} %{DATA:syslog_level} \'%{DATA:message_service}\'\ ?%{DATA:message_opID}])) \[%{DATA:message_service_info}]\ (?<syslog_message>(%{GREEDYDATA}))))",
+                "message", "<%{POSINT:syslog_pri}>%{TIMESTAMP_ISO8601:syslog_timestamp} %{SYSLOGHOST:hostname} %{SYSLOGPROG:message_program}: (?<body_type_2>(?<message_body>(?<message_system_info>(?:\[%{DATA:message_thread_id} %{DATA:syslog_level} \'%{DATA:message_service}\'\ ?%{DATA:message_opID}])) (?<syslog_message>(%{GREEDYDATA}))))",
+                "message", "<%{POSINT:syslog_pri}>%{TIMESTAMP_ISO8601:syslog_timestamp} %{SYSLOGHOST:hostname} %{SYSLOGPROG:message_program}: (?<body_type_3>(?<message_body>%{GREEDYDATA:syslog_message}))",
+                "message", "<%{POSINT:syslog_pri}>.*?[\s\r\t](?<hostname>[a-zA-Z0-9\-_]+[.][a-zA-Z0-9\-_\.]+)[\s].*?(?<message_program>[a-zA-Z0-9\-\[\]_]{3,})[:][\s](?<body_type_6>(?<message_body>(?<syslog_message>.*)))",
+                "message", "(?<body_type_7>(?<message_body>(?<message_debug>.*)))"
+            ]
+        }
+
+        if [message] =~ /(?i)vpxa/ {
+            grok {
+                id => "esxi-filter-grok_vpxa"
+                match => [ "message", "vpxa\[%{NUMBER:vpxaid:int}\]" ]
+                add_tag => "vpxa"
+            }
+        }
+        if [message] =~ /(?i)Originator@/ {
+            grok {
+                id => "esxi-filter-grok_orginator"
+				match => [ "message", "Originator@%{NUMBER:originator:int}" ]
+            }
+        }
+        if [message] =~ /(?i)sub=/ {
+            grok {
+                id => "esxi-filter-grok_sub"
+                match => [ "message", "sub=(?<vpxasub>[A-Za-z0-9\-@]+)" ]
+            }
+        }
+        if [message] =~ /(?i)opID=/ {
+            grok {
+                id => "esxi-filter-grok_opid"
+                match => [ "message", "opID=(?<opid>[A-Za-z0-9\-@]+)+" ]
+            }
+        }
+        
+        if [message] =~ /(?i)user=vpxuser/ {
+            grok {
+                id => "esxi-filter-grok_user"
+                match => [ "message", "user=vpxuser:(?<user>[A-Za-z0-9\\@.]+)+" ]
+            }
+        }
+        
+        if [message] =~ /(?i)vmfs/ {
+        # <166>2014-12-10T18:33:54.239Z esx.vmware.com Hostd: [3451AB90 verbose 'vm:/vmfs/volumes/f8431d5d-1d30ae43/vm_name/vmx_name.vmx'] Actual VM overhead: 170840064 bytes
+            grok {
+                id => "esxi-filter-grok_vmfs"
+                match => [
+                    "message", "/vmfs/volumes/%{USERNAME:vmfs_uuid}/%{USERNAME:vm_name}/%{USERNAME:vmx_name}[.](vmx|vswp|vmdk|log|vmxf|ctk|vmss|nvram|xml)",
+                    "message", "/vmfs/volumes/%{USERNAME:vmfs_uuid}"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)naa\./ {
+        # <181>2014-12-10T18:25:25.426Z esx.vmware.com vmkernel: cpu9:7045276)ScsiDeviceIO: 1198: Device naa.60a9800041764b6c463f437868556b7a performance has improved. I/O latency reduced from 5587 microseconds to 2650 microseconds.
+            grok {
+                id => "esxi-filter-grok_naa"
+                match => [
+                    "message", "(?<canonical_name>naa\.[a-f0-9]+)"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)MB/ {
+        # <181>2014-12-10T18:50:27.101Z esx.vmware.com vmkernel: cpu11:1674338)VMotionSend: 3508: 1418237421145920 S: Sent all modified pages to destination (network bandwidth ~460.523 MB/s)
+            grok {
+                id => "esxi-filter-grok_mb"
+                match => [
+                   "message", "[~\s]{0,1}%{NUMBER:mbps:float}[\s]{0,1}MB\/s"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)ms/ {
+        # <181>2014-12-10T18:43:57.374Z esx.vmware.com vmkernel: cpu3:9751)FS3Misc: 1440: Long VMFS3 rsv time on 'datastore_name' (held for 272 msecs). # R: 1, # W: 1 bytesXfer: 5 sectors
+            grok {
+                id => "esxi-filter-grok_ms"
+                match => [
+                    "message", "[\s]%{NUMBER:milliseconds:int}[\s].*(ms|msecs)"
+                ]
+            }
+        } else if [message] =~ /(?i)micro/ {
+            grok {
+                id => "esxi-filter-grok_us"
+                match => [
+                    "message", ".*[\s]%{NUMBER:microseconds:int}[\s]micro[sS]ec"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)vmhba/ {
+        # <181>2014-12-10T16:30:49.589Z esx.vmware.com vmkernel: cpu14:4739)ScsiPath: 4552: Plugin 'NMP' claimed path 'vmhba0:C0:T0:L3'
+            grok {
+                id => "esxi-filter-grok_vmhba"
+                match => [
+                    "message", "(?<runtime_name>vmhba[0-9]+:C[0-9]+:T[0-9]+:L[0-9]+)"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)sense data/ {
+        # <181>2014-12-10T18:21:53.018Z esx.vmware.com vmkernel: cpu13:1264143)ScsiDeviceIO: 2311: Cmd(0x4124403de140) 0x28, CmdSN 0x8000004b from world 1171425 to dev "naa.60a9800041764b6c463f437868556c47" failed H:0x2 D:0x0 P:0x0 Possible sense data: 0x0 0x0 0x0.
+            grok {
+                id => "esxi-filter-grok_sensedata"
+                match => [
+                    "message", "(?<scsi_code>H:[a-f0-9]+x[a-f0-9]+ D:[a-f0-9]+x[a-f0-9]+ P:[a-f0-9]+x[a-f0-9]+).*(?<sense_data>[a-f0-9]+x[a-f0-9]+ [a-f0-9]+x[a-f0-9]+ [a-f0-9]+x[a-f0-9]+)"
+                ]
+            }
+            if [sense_data] != "0x0 0x0 0x0" {
+                mutate {
+                    id => "esxi-filter-mutate_sensedata"
+                    add_tag =>  "alert"
+                }
+            }
+        }
+
+        if [message] =~ /(?i)vmnic/ {
+        # <181>2014-12-10T18:44:52.380Z esx.vmware.com vmkernel: cpu18:8243)<3>ixgbe: vmnic6: ixgbe_alloc_rx_queue: allocated rx queue 1
+            grok {
+                id => "esxi-filter-grok_vmnic"
+                match => [
+                    "message", "(?<vmnic>vmnic[0-9]+)"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)[\s]vol[\s]/{
+        # <181>2014-12-18T00:48:42.879Z esx.vmware.com vmkernel: cpu5:14780898)FS3: 1227: vol 'datastore_name': [Req mode: 1] Checking liveness of [type 10c00002 offset 9834496 v 1112, hb offset 3719168
+            grok {
+                id => "esxi-filter-grok_vol"
+                match => [
+                    "message", " vol '%{GREEDYDATA:datastore_name}'"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)vim\./ {
+        # <166>2014-12-10T18:39:25.632Z esx.vmware.com Vpxa: [FFBAAB90 verbose 'Default' opID=SWI-88e6d2f0] [TaskInfoChannel::GetTaskInfo] task: haTask--vim.host.VMotionManager.initiateDestination-134036228 setup for async notification
+            grok {
+                id => "esxi-filter-grok_vim"
+                match => [
+                    "message", "(?<vim>vim\.[a-zA-Z\.]+)"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)vmodl\./ {
+        # <166>2014-12-10T18:42:14.963Z esx.vmware.com Hostd: [25D95B90 info 'Vmomi'] Throw vmodl.fault.RequestCanceled
+            grok {
+                id => "esxi-filter-grok_vmodl"
+                match => [
+                    "message", "(?<vmodl>vmodl\.[a-zA-Z\.]+)"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)Correlator/ {
+        # <14>2014-12-10T16:31:09.619Z esx.vmware.com vobd:  [netCorrelator] 73154456us: [esx.audit.net.firewall.config.changed] Firewall configuration has changed. Operation 'add' for rule set webAccess succeeded.
+            grok {
+                id => "esxi-filter-grok_correlator"
+                match => [
+                    "message", "\[(?<correlator>.*Correlator)\]"
+                ]
+            }
+        }
+
+        if [message] =~ /(?i)vmotion/ {
+        # <166>2014-12-10T18:28:11.769Z esx.vmware.com Vpxa: [FFF69B90 verbose 'Default' opID=task-internal-1-19c63550-66-6-e2-56-d2-77-90-e5] [MIGRATE] (1418236087721814) vmotion result has downtime value 284157
+            grok {
+                id => "esxi-filter-grok_vmotion"
+                match => [
+                    "message", "vmotion result has downtime value %{NUMBER:vmotion_downtime:int}"
+                ]
+            }
+        }
+
+        #################
+
+        if [message_program] == "storageRM" {
+        # <14>2014-12-10T18:33:04.910Z esx.vmware.com storageRM:  <datastore_name> 2707630 avglatency= 0.83 iops= 84 threshold= 30 Win = 30.00 ws= 30 devqdepth= 30 iocount= 4 noio= 0.00 coio= 0.05
+            grok {
+                id => "esxi-filter-grok_storageRM"
+                match => [
+                    "message", "storageRM:[\s]+<%{GREEDYDATA:iorm_datastore}>.*avglatency=[\s]+%{NUMBER:iorm_avglatency:float}[\s]+iops=[\s]+%{NUMBER:iorm_iops:int}.*devqdepth=[\s]+%{NUMBER:iorm_devqdepth:int}"
+                    ]
+                add_tag =>  "iorm"
+            }
+            mutate {
+                id => "esxi-filter-mutate_storageRM"
+                gsub => [
+                    "iorm_datastore", ", 0", ""
+                ]
+            }
+        }
+
+
+        date {
+            id => "esxi-filter-date"
+            match => [ "syslog_timestamp", "ISO8601" ]
+            remove_field => [ "syslog_timestamp" ]
+        }
+
+        syslog_pri {
+            id => "esxi-filter-syslogpri"
+        }
+
+        mutate {
+            id => "esxi-filter-mutate_removefield"
+            remove_field => [ "port", "host", "syslog_message", "body_type_1", "body_type_2", "body_type_3", "body_type_6", "body_type_7"]
+        }
+
+}
+output {
+#    stdout { codec => rubydebug }
+    elasticsearch {
+       id => "esxi-output-elasticsearch"
+       hosts => ["http://elasticsearch01:9200"]
+       #hosts => ["http://lncr01vtmon:80/elastic"]
+       user => "elastic"
+       password => "123456ab"
+       index => "esxi-%{+YYYY.MM.dd}"
+    }
+}
