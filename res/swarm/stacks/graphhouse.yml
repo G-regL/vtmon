@@ -85,27 +85,7 @@ services:
     networks:
       graphhouse-net:
         aliases:
-          - carbon-c-relay
-
-  tabix:
-    image: spoonest/clickhouse-tabix-web-client
-    environment:
-      - CH_NAME=GraphHouse
-      - CH_HOST=${HOSTIPFQDN}
-      - CH_LOGIN=default
-    deploy:
-      mode: replicated
-      replicas: 1
-#      labels:
-#        - "traefik.enable=true"
-#        - "traefik.frontend.rule=PathPrefixStrip:/tabix/"
-#        - "traefik.port=80"
-    ports:
-      - 8081:80
-    networks:
-      - graphhouse-net
-      - traefik-net
-    
+          - carbon-c-relay    
       
 configs:
   GraphHouse_clickhouse-rollup.xml-20190530.1049:
@@ -123,6 +103,4 @@ configs:
   
 networks:
   graphhouse-net:
-    external: true
-  traefik-net:
     external: true
