@@ -5,11 +5,6 @@ services:
     image: grafana/grafana:7.5.4
     volumes:
       - /opt/docker/stack.grafana/service.grafana/data:/var/lib/grafana
-    healthcheck:
-      test: "curl -fsSL -o /dev/null 'http://localhost:3000/login'"
-      interval: 10s
-      timeout: 1s
-      retries: 3
     networks:
       - graphhouse-net
     ports:

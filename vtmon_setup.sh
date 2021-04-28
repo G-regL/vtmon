@@ -167,7 +167,7 @@ echo " Install/remove packages"
 #echo "${CHECK} Remove old Docker packages"
 # Install some dependencies
 echo "${SPACE} Install required packages"
-tdnf install -qy parted jq 2&> /dev/null
+tdnf install -qy parted jq
 echo "${CHECK} Install required packages"
 # Add the official Docker repo
 #echo "${SPACE} Add the official Docker repo"
@@ -254,7 +254,7 @@ echo "${CHECK} Generate admin auth token"
 # Gather some endpoint details
 echo "${SPACE} Gather endpoint details"
 portEndpointID=`curl -s http://${ipfqdn}:9000/api/endpoints -H "Authorization: Bearer $portAuthToken" |jq '.[0].Id'`
-portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/1/docker/swarm -H "Authorization: Bearer $portAuthToken" |jq -r '.ID'`
+portSwarmID=`curl -s http://${ipfqdn}:9000/api/endpoints/${portEndpointID}/docker/swarm -H "Authorization: Bearer $portAuthToken" |jq -r '.ID'`
 echo "${CHECK} Gather endpoint details"
 
 # Set the endpoint name
@@ -475,13 +475,13 @@ echo
 echo
 echo "VTMon is now deployed and ready to go!"
 echo
-echo "Please visit Grafana at http://${ipfqdn}/grafana/, and login with admin:${adminPass}."
+echo "Please visit Grafana at http://${ipfqdn}, and login with admin:${adminPass}."
 #echo 
 #echo "You can also visit Moira at http://${ipfqdn}:8083 to setup alerts."
 #echo "Extra steps will be required to enable email/Slack notifications."
 echo
 echo "Should you want/need to check on the status of the system, you can use the following URLs"
-echo "  Portainer (Container manager)     - http://${ipfqdn}/portainer/"
+echo "  Portainer (Container manager)     - http://${ipfqdn}:9000"
 echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
 #echo "  Tabix (Metrics management GUI)    - http://${ipfqdn}:8081/"
 echo

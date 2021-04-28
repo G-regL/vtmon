@@ -12,7 +12,7 @@ services:
       - source: Telegraf_cluster-telegraf.conf-20190522.1017
         target: /etc/telegraf/telegraf.conf
     networks:
-      - graphite-net
+      - graphhouse-net
     deploy:
       mode: replicated
       replicas: 0
@@ -28,7 +28,7 @@ services:
       - source: Telegraf_datacenter-telegraf.conf-20190522.1017
         target: /etc/telegraf/telegraf.conf
     networks:
-      - graphite-net
+      - graphhouse-net
     deploy:
       mode: replicated
       replicas: 0
@@ -44,7 +44,7 @@ services:
       - source: Telegraf_datastore-telegraf.conf-20190522.1015
         target: /etc/telegraf/telegraf.conf
     networks:
-      - graphite-net
+      - graphhouse-net
     deploy:
       mode: replicated
       replicas: 1
@@ -60,7 +60,7 @@ services:
       - source: Telegraf_host-telegraf.conf-20190522.1014
         target: /etc/telegraf/telegraf.conf
     networks:
-      - graphite-net
+      - graphhouse-net
     deploy:
       mode: replicated
       replicas: 1
@@ -77,7 +77,7 @@ services:
       - source: Telegraf_vm-telegraf.conf-20190522.1006
         target: /etc/telegraf/telegraf.conf
     networks:
-      - graphite-net
+      - graphhouse-net
     deploy:
       mode: replicated
       replicas: 1

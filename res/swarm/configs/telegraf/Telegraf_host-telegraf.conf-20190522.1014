@@ -83,7 +83,7 @@
 ###############################################################################
 # Configuration for Graphite server to send metrics to
 [[outputs.graphite]]
-  servers = ["Graphite_relay:2003"]
+  servers = ["GraphHouse_relay:2003"]
   ## Prefix metrics name
   prefix = ""
   template = "measurement.tags.field"
