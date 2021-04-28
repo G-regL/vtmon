@@ -22,7 +22,6 @@ services:
       - /opt/docker/stack.Portainer/service.portainer:/data
     networks:
       - agent_network
-      - traefik-net
     deploy:
       mode: replicated
       replicas: 1
