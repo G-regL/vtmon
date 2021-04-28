@@ -55,10 +55,11 @@ function wait_for_service () {
 
 function make_filesystem () {
   device=$1
-  volgroup=$2
-  volname=$3
-  mountpoint=$4
-  echo " Set up $device as $mountpoint ($volgroup-$volname)"
+  #volgroup=$2
+  #volname=$3
+  mountpoint=$2
+  #echo " Set up $device as $mountpoint ($volgroup-$volname)"
+  echo " Set up $device as $mountpoint"
   echo "${SPACE} Partition disk"
   parted -s $device mktable gpt > /dev/null
   parted -s $device mkpart primary 0% 100% > /dev/null
@@ -66,20 +67,20 @@ function make_filesystem () {
 
   partition="${device}1"
 
-  echo "${SPACE} Create LVM physical volume"
-  pvcreate ${partition} > /dev/null
-  echo "${CHECK} Create LVM physical volume"
+  #echo "${SPACE} Create LVM physical volume"
+  #pvcreate ${partition} > /dev/null
+  #echo "${CHECK} Create LVM physical volume"
 
-  echo "${SPACE} Create LVM volume group"
-  vgcreate $volgroup ${partition} > /dev/null
-  echo "${CHECK} Create LVM volume group"
+  #echo "${SPACE} Create LVM volume group"
+  #vgcreate $volgroup ${partition} > /dev/null
+  #echo "${CHECK} Create LVM volume group"
 
-  echo "${SPACE} Create LVM logical volume"
-  lvcreate $volgroup -l 100%FREE -n $volname ${partition} > /dev/null
-  echo "${CHECK} Create LVM logical volume"
+  #echo "${SPACE} Create LVM logical volume"
+  #lvcreate $volgroup -l 100%FREE -n $volname ${partition} > /dev/null
+  #echo "${CHECK} Create LVM logical volume"
 
   echo -n "${SPACE} Format filesystem [  "
-  mkfs.xfs -fq /dev/$volgroup/$volname > /dev/null &
+  mkfs.ext4 -fq /dev/$partition > /dev/null &
   PID=$!
   c=1
   sp="/-\|"
@@ -91,7 +92,7 @@ function make_filesystem () {
   echo "${CHECK} Format filesystem    "
 
   echo "${SPACE} Add fstab entry"
-  echo "/dev/$volgroup/$volname    $mountpoint                    xfs     defaults        1 1" >> /etc/fstab
+  echo "/dev/$partition    $mountpoint                    ext4     defaults        1 1" >> /etc/fstab
   echo "${CHECK} Add fstab entry"
 
   if [ ! -d $mountpoint ]; then
@@ -158,16 +159,6 @@ echo "We've got everything we need to setup, so let's get started!"
 read -p "Hit ENTER to continue"
 echo
 
-echo "System setup"
-# --------- Disks/Mounts
-# Create the /var/lib/docker mountpoint
-make_filesystem /dev/sdb vg01 docker /var/lib/docker
-echo
-
-# Create the /opt mountpoint
-make_filesystem /dev/sdc vg02 opt /opt
-echo
-
 echo " Install/remove packages"
 # -------- Packages
 # Remove any version of Docker if it's there
@@ -176,7 +167,7 @@ echo " Install/remove packages"
 #echo "${CHECK} Remove old Docker packages"
 # Install some dependencies
 echo "${SPACE} Install required packages"
-yum install -qy device-mapper-persistent-data lvm2 jq htop 2&> /dev/null
+yum install -qy parted jq 2&> /dev/null
 echo "${CHECK} Install required packages"
 # Add the official Docker repo
 #echo "${SPACE} Add the official Docker repo"
@@ -186,6 +177,16 @@ echo "${CHECK} Install required packages"
 #echo "${SPACE} Install Docker"
 #yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
 #echo "${CHECK} Install Docker"
+echo
+
+echo "System setup"
+# --------- Disks/Mounts
+# Create the /var/lib/docker mountpoint
+make_filesystem /dev/sdb /var/lib/docker
+echo
+
+# Create the /opt mountpoint
+make_filesystem /dev/sdc /opt
 echo
 
 echo " Configure Docker"
