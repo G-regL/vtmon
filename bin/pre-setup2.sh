@@ -15,7 +15,9 @@ function pull_docker_images () {
     echo "${CHECK} $i     "
   done
 }
+ 
 
+ 
 
 function make_persistent_storage () {
   dir=$1
