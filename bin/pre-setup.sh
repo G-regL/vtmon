@@ -1,4 +1,4 @@
-yum install -y unzip
+tdnf install -y unzip
 curl -sLo vtmon.zip https://github.com/G-regL/vtmon/archive/refs/heads/Simple.zip
 unzip vtmon.zip
 cd vtmon-Simple/

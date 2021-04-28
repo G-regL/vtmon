@@ -80,7 +80,7 @@ function make_filesystem () {
   #echo "${CHECK} Create LVM logical volume"
 
   echo -n "${SPACE} Format filesystem [  "
-  mkfs.ext4 -fq /dev/$partition > /dev/null &
+  mkfs.ext4 -q $partition > /dev/null &
   PID=$!
   c=1
   sp="/-\|"
@@ -92,7 +92,7 @@ function make_filesystem () {
   echo "${CHECK} Format filesystem    "
 
   echo "${SPACE} Add fstab entry"
-  echo "/dev/$partition    $mountpoint                    ext4     defaults        1 1" >> /etc/fstab
+  echo "$partition    $mountpoint                    ext4     defaults        1 1" >> /etc/fstab
   echo "${CHECK} Add fstab entry"
 
   if [ ! -d $mountpoint ]; then
@@ -115,10 +115,10 @@ echo "Portainer and Grafana both need to have an admin user account created and 
 echo "need to know what password you want to use."
 # Gather some details for the deployment
 while true; do
-    read -p " Admin user password: " adminPass
-#    echo
-    read -p " Confirm password: " adminPass2
-#    echo
+    read -sp " Admin user password: " adminPass
+    echo
+    read -sp " Confirm password: " adminPass2
+    echo
     [ "$adminPass" = "$adminPass2" ] && break
     echo "ERROR: Passwords didn't match, please try again"
 done
@@ -145,10 +145,10 @@ echo "granted to it at the root of the vCenter."
 echo "It's recommended to use an SSO account, for ease of management."
 read -p " vCenter user: " vcuser
 while true; do
-    read -p " vCenter user password: " vcpassword
-#    echo
-    read -p " Confirm password: " vcpassword2
-#    echo
+    read -sp " vCenter user password: " vcpassword
+    echo
+    read -sp " Confirm password: " vcpassword2
+    echo
     [ "$vcpassword" = "$vcpassword2" ] && break
     echo "ERROR: Passwords didn't match, please try again"
 done
@@ -167,7 +167,7 @@ echo " Install/remove packages"
 #echo "${CHECK} Remove old Docker packages"
 # Install some dependencies
 echo "${SPACE} Install required packages"
-yum install -qy parted jq 2&> /dev/null
+tdnf install -qy parted jq 2&> /dev/null
 echo "${CHECK} Install required packages"
 # Add the official Docker repo
 #echo "${SPACE} Add the official Docker repo"
@@ -179,6 +179,10 @@ echo "${CHECK} Install required packages"
 #echo "${CHECK} Install Docker"
 echo
 
+echo "DONE"
+read -p "Hit ENTER to continue"
+echo
+
 echo "System setup"
 # --------- Disks/Mounts
 # Create the /var/lib/docker mountpoint
@@ -187,6 +191,10 @@ echo
 
 # Create the /opt mountpoint
 make_filesystem /dev/sdc /opt
+echo
+
+echo "DONE"
+read -p "Hit ENTER to continue"
 echo
 
 echo " Configure Docker"
@@ -230,7 +238,6 @@ pull_docker_images $(cat res/swarm/stacks/portainer.yml | grep image | awk -F\  
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
-
 
 
 echo " Set up Portainer"
