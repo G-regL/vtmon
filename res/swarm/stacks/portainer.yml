@@ -19,7 +19,7 @@ services:
     ports:
       - "9000:9000"
     volumes:
-      - /opt/docker/stack.Portainer/service.portainer:/data
+      - /opt/docker/Portainer/portainer/data:/data
     networks:
       - agent_network
     deploy:

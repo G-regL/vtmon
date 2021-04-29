@@ -8,9 +8,11 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    configs:
-      - source: Telegraf_cluster-telegraf.conf-20190522.1017
-        target: /etc/telegraf/telegraf.conf
+    #configs:
+    #  - source: Telegraf_cluster-telegraf.conf-20190522.1017
+    #    target: /etc/telegraf/telegraf.conf
+    volumes:
+      - /opt/docker/Telegraf/cluster/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
       - graphhouse-net
     deploy:
@@ -86,14 +88,14 @@ networks:
   graphhouse-net:
     external: true
     
-configs:
-  Telegraf_cluster-telegraf.conf-20190522.1017:
-    external: true
-  Telegraf_datacenter-telegraf.conf-20190522.1017:
-    external: true
-  Telegraf_datastore-telegraf.conf-20190522.1015:
-    external: true
-  Telegraf_host-telegraf.conf-20190522.1014:
-    external: true
-  Telegraf_vm-telegraf.conf-20190522.1006:
-    external: true
+#configs:
+#  Telegraf_cluster-telegraf.conf-20190522.1017:
+#    external: true
+#  Telegraf_datacenter-telegraf.conf-20190522.1017:
+#    external: true
+#  Telegraf_datastore-telegraf.conf-20190522.1015:
+#    external: true
+#  Telegraf_host-telegraf.conf-20190522.1014:
+#    external: true
+#  Telegraf_vm-telegraf.conf-20190522.1006:
+#    external: true

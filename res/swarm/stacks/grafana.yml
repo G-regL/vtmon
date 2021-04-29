@@ -4,7 +4,7 @@ services:
   grafana:
     image: grafana/grafana:7.5.4
     volumes:
-      - /opt/docker/stack.grafana/service.grafana/data:/var/lib/grafana
+      - /opt/docker/Grafana/grafana/data:/var/lib/grafana
     networks:
       - graphhouse-net
     ports:
