@@ -6,11 +6,10 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-    #configs:
-    #  - source: GraphHouse_api-api.yaml-20190530.1000
-    #    target: /openmetric/conf/api.yaml
     volumes:
       - /opt/docker/GraphHouse/api/config/carbonapi.yml:/etc/carbonapi.yml
+      #- /opt/docker/GraphHouse/api/config/graphTemplates.yml:/etc/graphTemplates.yml
+      #- /opt/docker/GraphHouse/api/config/graphiteWeb.yml:/etc/graphiteWeb.yml
     depends_on:
       - graphite
     networks:
@@ -23,9 +22,6 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-    #configs: 
-    #  - source: GraphHouse_carbon-carbon-clickhouse.conf-20190530.1000
-    #    target: /etc/carbon-clickhouse/carbon-clickhouse.conf
     volumes:
       - /opt/docker/GraphHouse/carbon/data:/data/carbon-clickhouse
       - /opt/docker/GraphHouse/carbon/config/carbon-clickhouse.conf:/etc/carbon-clickhouse/carbon-clickhouse.conf
@@ -41,11 +37,6 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-    #configs:
-    #  - source: GraphHouse_clickhouse-rollup.xml-20190530.1049
-    #    target: /etc/clickhouse-server/config.d/rollup.xml
-    #  - source: GraphHouse_clickhouse-init.sql-20190530.1000
-    #    target: /docker-entrypoint-initdb.d/init.sql
     #ports:
     #  - 8123:8123
     volumes:
@@ -61,9 +52,6 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-    #configs: 
-    #  - source: GraphHouse_graphite-graphite-clickhouse.conf-20190530.1000
-    #    target: /etc/graphite-clickhouse/graphite-clickhouse.conf
     volumes:
       - /opt/docker/GraphHouse/graphite/config/graphite-clickhouse.conf:/etc/graphite-clickhouse/graphite-clickhouse.conf
     depends_on:
@@ -79,9 +67,6 @@ services:
       mode: replicated
       replicas: 1
     command: carbon-c-relay -f /etc/carbon-c-relay/carbon-c-relay.conf -c -_:#@%$$|
-    #configs:
-    #  - source: GraphHouse_relay_relay.conf-20190606.0803
-    #    target: /openmetric/conf/relay.conf
     volumes:
       - /opt/docker/GraphHouse/relay/config/carbon-c-relay.conf:/etc/carbon-c-relay/carbon-c-relay.conf
     ports:
@@ -92,20 +77,6 @@ services:
       graphhouse-net:
         aliases:
           - carbon-c-relay    
-      
-#configs:
-#  GraphHouse_clickhouse-rollup.xml-20190530.1049:
-#    external: true
-#  GraphHouse_clickhouse-init.sql-20190530.1000:
-#    external: true
-#  GraphHouse_carbon-carbon-clickhouse.conf-20190530.1000:
-#    external: true
-#  GraphHouse_graphite-graphite-clickhouse.conf-20190530.1000:
-#    external: true
-#  GraphHouse_api-api.yaml-20190530.1000: 
-#    external: true
-#  GraphHouse_relay_relay.conf-20190606.0803:
-#    external: true
   
 networks:
   graphhouse-net:

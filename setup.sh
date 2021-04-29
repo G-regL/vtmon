@@ -199,7 +199,6 @@ find res/grafana/ -iname *.json | while read file; do
     echo "${CHECK} $folder_name/$dashboard_name"
 done
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 

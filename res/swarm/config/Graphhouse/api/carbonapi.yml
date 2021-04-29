@@ -1,11 +1,18 @@
-listen: ":8080"
-concurrency: 20
+listen: "0.0.0.0:8080"
+# Controls headers that would be passed to the backend
+headersToPass:
+  - "X-Dashboard-Id"
+  - "X-Grafana-Org-Id"
+  - "X-Panel-Id"
+concurrency: 200
 cache:
-   type: "mem"
-   size_mb: 0
-   defaultTimeoutSec: 60
+  type: "mem"
+  size_mb: 0
+  defaultTimeoutSec: 60
 cpus: 0
 tz: ""
+#functionsConfig:
+#  graphiteWeb: /etc/graphiteWeb.yml
 sendGlobsAsIs: false
 maxBatchSize: 100
 graphite:
@@ -21,12 +28,29 @@ upstreams:
     global: "10s"
     afterStarted: "2s"
     connect: "200ms"
-  concurrencyLimit: 0
+  cconcurrencyLimitPerServer: 1000
   keepAliveInterval: "30s"
   maxIdleConnsPerHost: 100
-  backends:
-    - "http://graphite-clickhouse:9090"
-  graphite09compat: false
+  backendsv2:
+    backends:
+      -
+        groupName: "clickhouse-cluster-2"
+        protocol: "carbonapi_v2_pb"
+        lbMethod: "rr"
+        maxTries: 3
+        maxBatchSize: 0
+        keepAliveInterval: "30s"
+        concurrencyLimit: 1000
+        maxIdleConnsPerHost: 1000
+        timeouts:
+            find: "10s"
+            render: "50s"
+            connect: "200ms"
+        servers:
+            - "http://graphite-clickhouse:9090"
+
+#graphTemplates: /etc/graphTemplates.yml
+expireDelaySec: 10
 logger:
   - logger: ""
     file: "stdout"

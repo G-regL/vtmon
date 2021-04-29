@@ -8,9 +8,6 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    #configs:
-    #  - source: Telegraf_cluster-telegraf.conf-20190522.1017
-    #    target: /etc/telegraf/telegraf.conf
     volumes:
       - /opt/docker/Telegraf/cluster/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
@@ -19,6 +16,7 @@ services:
       mode: replicated
       replicas: 0
 
+
   datacenter:
     image: telegraf:1.10.0-alpine
     command: telegraf
@@ -26,14 +24,14 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    configs:
-      - source: Telegraf_datacenter-telegraf.conf-20190522.1017
-        target: /etc/telegraf/telegraf.conf
+    volumes:
+      - /opt/docker/Telegraf/datacenter/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
       - graphhouse-net
     deploy:
       mode: replicated
       replicas: 0
+
 
   datastore:
     image: telegraf:1.10.0-alpine
@@ -42,15 +40,15 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    configs:
-      - source: Telegraf_datastore-telegraf.conf-20190522.1015
-        target: /etc/telegraf/telegraf.conf
+    volumes:
+      - /opt/docker/Telegraf/datastore/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
       - graphhouse-net
     deploy:
       mode: replicated
       replicas: 1
 
+      
   host:
     image: telegraf:1.10.0-alpine
     command: telegraf
@@ -58,9 +56,8 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    configs:
-      - source: Telegraf_host-telegraf.conf-20190522.1014
-        target: /etc/telegraf/telegraf.conf
+    volumes:
+      - /opt/docker/Telegraf/host/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
       - graphhouse-net
     deploy:
@@ -75,9 +72,8 @@ services:
       - VCENTERS=$VCENTERS
       - VCUSERNAME=$VCUSERNAME
       - VCPASSWORD=$VCPASSWORD
-    configs:
-      - source: Telegraf_vm-telegraf.conf-20190522.1006
-        target: /etc/telegraf/telegraf.conf
+    volumes:
+      - /opt/docker/Telegraf/vm/telegraf.conf:/etc/telegraf/telegraf.conf
     networks:
       - graphhouse-net
     deploy:
@@ -87,15 +83,3 @@ services:
 networks:
   graphhouse-net:
     external: true
-    
-#configs:
-#  Telegraf_cluster-telegraf.conf-20190522.1017:
-#    external: true
-#  Telegraf_datacenter-telegraf.conf-20190522.1017:
-#    external: true
-#  Telegraf_datastore-telegraf.conf-20190522.1015:
-#    external: true
-#  Telegraf_host-telegraf.conf-20190522.1014:
-#    external: true
-#  Telegraf_vm-telegraf.conf-20190522.1006:
-#    external: true

@@ -80,10 +80,15 @@ function make_filesystem () {
 
 function copy_service_config () {
   f=`echo $1 |cut -d/ -f5-6`
+  perms=$3
 
   echo "${SPACE} $f"
   cp $1 $2
+  if [ "$perms" != "" ]; then
+    chown -R $perms $2
+  fi
   echo "${CHECK} $f"
+  
 }
 
 
@@ -146,19 +151,19 @@ echo
 echo "Copy configs"
 # GrapHouse
 echo " GraphHouse"
-copy_service_config res/swarm/config/Graphhouse/api/carbonapi.yml /opt/docker/GraphHouse/api/config/
-copy_service_config res/swarm/config/Graphhouse/carbon/carbon-clickhouse.conf /opt/docker/GraphHouse/carbon/config/
-copy_service_config res/swarm/config/Graphhouse/clickhouse/rollup.xml /opt/docker/GraphHouse/clickhouse/config/
-copy_service_config res/swarm/config/Graphhouse/clickhouse/init.sql /opt/docker/GraphHouse/clickhouse/config/
-copy_service_config res/swarm/config/Graphhouse/graphite/graphite-clickhouse.conf /opt/docker/GraphHouse/graphite/config/
-copy_service_config res/swarm/config/Graphhouse/relay/carbon-c-relay.conf /opt/docker/GraphHouse/relay/config/
+copy_service_config res/swarm/config/Graphhouse/api/carbonapi.yml /opt/docker/GraphHouse/api/config/carbonapi.yml
+copy_service_config res/swarm/config/Graphhouse/carbon/carbon-clickhouse.conf /opt/docker/GraphHouse/carbon/config/carbon-clickhouse.conf 
+copy_service_config res/swarm/config/Graphhouse/clickhouse/rollup.xml /opt/docker/GraphHouse/clickhouse/config/rollup.xml 101
+copy_service_config res/swarm/config/Graphhouse/clickhouse/init.sql /opt/docker/GraphHouse/clickhouse/config/init.sql
+copy_service_config res/swarm/config/Graphhouse/graphite/graphite-clickhouse.conf /opt/docker/GraphHouse/graphite/config/graphite-clickhouse.conf
+copy_service_config res/swarm/config/Graphhouse/relay/carbon-c-relay.conf /opt/docker/GraphHouse/relay/config/carbon-c-relay.conf
 # Telegraf
 echo " Telegraf"
-copy_service_config res/swarm/config/Telegraf/cluster/telegraf.conf /opt/docker/Telegraf/cluster/
-copy_service_config res/swarm/config/Telegraf/datacenter/telegraf.conf /opt/docker/Telegraf/datacenter/
-copy_service_config res/swarm/config/Telegraf/datastore/telegraf.conf /opt/docker/Telegraf/datastore/
-copy_service_config res/swarm/config/Telegraf/host/telegraf.conf /opt/docker/Telegraf/host/
-copy_service_config res/swarm/config/Telegraf/vm/telegraf.conf /opt/docker/Telegraf/vm/
+copy_service_config res/swarm/config/Telegraf/cluster/telegraf.conf /opt/docker/Telegraf/cluster/telegraf.conf
+copy_service_config res/swarm/config/Telegraf/datacenter/telegraf.conf /opt/docker/Telegraf/datacenter/telegraf.conf
+copy_service_config res/swarm/config/Telegraf/datastore/telegraf.conf /opt/docker/Telegraf/datastore/telegraf.conf
+copy_service_config res/swarm/config/Telegraf/host/telegraf.conf /opt/docker/Telegraf/host/telegraf.conf
+copy_service_config res/swarm/config/Telegraf/vm/telegraf.conf /opt/docker/Telegraf/vm/telegraf.conf
 
 echo
 
