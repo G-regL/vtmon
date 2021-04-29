@@ -2,7 +2,7 @@ version: "3.6"
 
 services:
   api:
-    image: openmetric/carbonapi:0.11.0
+    image: gographite/carbonapi:v0.15.2
     deploy:
       mode: replicated
       replicas: 1
@@ -10,7 +10,7 @@ services:
     #  - source: GraphHouse_api-api.yaml-20190530.1000
     #    target: /openmetric/conf/api.yaml
     volumes:
-      - /opt/docker/GraphHouse/api/config/api.yaml:/openmetric/conf/api.yaml
+      - /opt/docker/GraphHouse/api/config/carbonapi.yml:/etc/carbonapi.yml
     depends_on:
       - graphite
     networks:
@@ -74,16 +74,16 @@ services:
          - graphite-clickhouse
 
   relay:
-    image: openmetric/carbon-c-relay:v3.5
+    image: sscvssu/carbon-c-relay:v3.7.2
     deploy:
       mode: replicated
       replicas: 1
-    command: carbon-c-relay -f /openmetric/conf/relay.conf -c -_:#@%$$|
+    command: carbon-c-relay -f /etc/carbon-c-relay/carbon-c-relay.conf -c -_:#@%$$|
     #configs:
     #  - source: GraphHouse_relay_relay.conf-20190606.0803
     #    target: /openmetric/conf/relay.conf
     volumes:
-      - /opt/docker/GraphHouse/relay/config/relay.conf:/openmetric/conf/relay.conf
+      - /opt/docker/GraphHouse/relay/config/carbon-c-relay.conf:/etc/carbon-c-relay/carbon-c-relay.conf
     ports:
       - "2003:2003"
     depends_on:

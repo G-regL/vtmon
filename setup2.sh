@@ -80,6 +80,7 @@ echo "We've got everything we need to setup, so let's get started!"
 read -p "Hit ENTER to continue"
 echo
 
+echo "Setup"
 # Initialize the swarm
 echo "${SPACE} Initialize the Docker Swarm"
 docker swarm init >> /dev/null
@@ -94,18 +95,17 @@ for net in graphhouse-net; do
   echo "${CHECK} $net"
 done
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 # Deploy Portainer, using the command-line
-echo "Deploy Portainer"
+echo "Portainer"
 
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null &
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
 
 
-echo " Set up Portainer"
+echo " Configure"
 # Change admin password
 echo "${SPACE} Set admin password"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
@@ -129,15 +129,11 @@ curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PU
     -d '{"Name": "VTMon", "PublicURL": "'${ipfqdn}'"}'
 echo "${CHECK} Set Endpoint name"
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 
 # Deploy GraphHouse (Clickhouse + Graphite), using the Portainer API
-echo "Deploy GraphHouse"
-
-echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/graphhouse/*)
+echo "GraphHouse"
 
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -152,13 +148,12 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
 wait_for_service "[ \`docker service ls | grep GraphHouse | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '5' ]"
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 
 
 # Deploy Grafana, using the Portainer API
-echo "Deploy Grafana"
+echo "Grafana"
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -175,7 +170,7 @@ wait_for_service "curl -s -o /dev/null http://${ipfqdn}/api"
 
 
 # Set Grafana admin password
-echo " Configure Grafana"
+echo " Configure"
 echo "${SPACE} Set admin password"
 curl -s -o /dev/null http://${ipfqdn}/api/admin/users/1/password -X PUT \
     -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}'
@@ -221,9 +216,7 @@ echo
 
 
 # Deploy Telegraf, using the Portainer API
-echo "Deploy Telegraf"
-echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/telegraf/*)
+echo "Telegraf"
 
 echo " Deploy the stack"
 curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -242,7 +235,6 @@ stack_services=`cat res/swarm/stacks/telegraf.yml |grep replicas |grep -v 0 |wc 
 wait_for_service "[ \`docker service ls | grep Telegraf |awk '{print \$4}' |grep '1/1' |wc -l\` -eq '${stack_services}' ]"
 
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 echo
