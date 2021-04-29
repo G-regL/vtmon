@@ -3,3 +3,5 @@ curl -sLo vtmon.zip https://github.com/G-regL/vtmon/archive/refs/heads/Simple.zi
 unzip vtmon.zip
 cd vtmon-Simple/
 chmod +x vtmon_setup.sh
+chmod +x bin/pre-setup2.sh
+chmod +x setup2.sh

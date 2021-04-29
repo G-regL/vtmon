@@ -1,5 +1,8 @@
 #!/bin/bash
 
+CHECK="$(tput cuu1) [$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
+SPACE="    "
+
 function pull_docker_images () {
   for i in $*; do
     echo -n "${SPACE} $i [  "
@@ -17,7 +20,7 @@ function pull_docker_images () {
 }
  
 
- 
+
 
 function make_persistent_storage () {
   dir=$1
@@ -93,6 +96,7 @@ echo "${SPACE} Enable and start the Docker service"
 systemctl enable docker 2&> /dev/null
 systemctl start docker 2&> /dev/null
 echo "${CHECK} Enable and start the Docker service"
+echo
 
 
 echo " Make persistent storage"
@@ -104,6 +108,7 @@ make_persistent_storage /opt/docker/stack.GraphHouse/service.clickhouse/metadata
 make_persistent_storage /opt/docker/stack.GraphHouse/service.carbon
 #Grafana
 make_persistent_storage /opt/docker/stack.grafana/service.grafana/data/ 472:472
+echo
 
 echo " Pull Docker images"
 #Portainer

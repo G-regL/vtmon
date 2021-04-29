@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CHECK="$(tput cuu1) [$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
-SPACE="    "
+  CHECK="$(tput cuu1) [$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
+  SPACE="    "
 
 function wait_for_service () {
   echo -n "${SPACE} Start services [  "
@@ -13,6 +13,15 @@ function wait_for_service () {
   done
   echo
   echo "${CHECK} Start services       "
+}
+
+function create_swarm_configs () {
+  for config in $*; do
+    f=`basename $config`
+    echo "${SPACE} $f"
+    docker config create $f $config >> /dev/null
+    echo "${CHECK} $f"
+  done
 }
 
 echo "+------------------------------------------------------------------------------+"
@@ -90,8 +99,6 @@ echo
 
 # Deploy Portainer, using the command-line
 echo "Deploy Portainer"
-echo " Make persistent storage"
-make_persistent_storage /opt/docker/stack.Portainer/service.portainer
 
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null &
@@ -152,8 +159,6 @@ echo
 
 # Deploy Grafana, using the Portainer API
 echo "Deploy Grafana"
-echo " Make persistent storage"
-
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -250,5 +255,5 @@ echo "Please visit Grafana at http://${ipfqdn}, and login with admin:${adminPass
 echo
 echo "Should you want/need to check on the status of the system, you can use the following URLs"
 echo "  Portainer (Container manager)     - http://${ipfqdn}:9000"
-echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
+#echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
 #echo "  Tabix (Metrics management GUI)    - http://${ipfqdn}:8081/"
