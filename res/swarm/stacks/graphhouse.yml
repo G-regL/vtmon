@@ -19,7 +19,7 @@ services:
          - carbonapi
   
   carbon:
-    image: lomik/carbon-clickhouse:v0.10.0
+    image: lomik/carbon-clickhouse:v0.11.1
     deploy:
       mode: replicated
       replicas: 1
@@ -37,7 +37,7 @@ services:
          - carbon-clickhouse
 
   clickhouse:
-    image: yandex/clickhouse-server:19.6.2.11
+    image: yandex/clickhouse-server:21.3-alpine
     deploy:
       mode: replicated
       replicas: 1
@@ -57,7 +57,7 @@ services:
       - graphhouse-net
 
   graphite:
-    image: lomik/graphite-clickhouse:v0.9.0
+    image: lomik/graphite-clickhouse:v0.12.0
     deploy:
       mode: replicated
       replicas: 1
@@ -83,7 +83,7 @@ services:
     #  - source: GraphHouse_relay_relay.conf-20190606.0803
     #    target: /openmetric/conf/relay.conf
     volumes:
-      - /opt/docker/GraphHouse/relay/config/relay.yaml:/openmetric/conf/relay.conf
+      - /opt/docker/GraphHouse/relay/config/relay.conf:/openmetric/conf/relay.conf
     ports:
       - "2003:2003"
     depends_on:

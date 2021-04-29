@@ -69,7 +69,7 @@ function make_filesystem () {
 }
 
 function copy_service_config () {
-  f=`basename $1`
+  f=`$1 |cut -d/ -f5-6`
 
   echo "${SPACE} $f"
   cp $1 $2
@@ -130,7 +130,6 @@ make_persistent_storage /opt/docker/Telegraf/datastore/
 make_persistent_storage /opt/docker/Telegraf/host/
 make_persistent_storage /opt/docker/Telegraf/vm/
 
-
 echo
 
 echo " Copy configs"
@@ -141,7 +140,7 @@ copy_service_config res/swarm/config/Graphhouse/carbon/carbon-clickhouse.conf /o
 copy_service_config res/swarm/config/Graphhouse/clickhouse/rollup.xml /opt/docker/GraphHouse/clickhouse/config/
 copy_service_config res/swarm/config/Graphhouse/clickhouse/init.sql /opt/docker/GraphHouse/clickhouse/config/
 copy_service_config res/swarm/config/Graphhouse/graphite/graphite-clickhouse.conf /opt/docker/GraphHouse/graphite/config/
-copy_service_config res/swarm/config/Graphhouse/relay/relay.yaml /opt/docker/GraphHouse/relay/config/
+copy_service_config res/swarm/config/Graphhouse/relay/relay.conf /opt/docker/GraphHouse/relay/config/
 # Telegraf
 echo " Telegraf"
 copy_service_config res/swarm/config/Telegraf/cluster/telegraf.conf /opt/docker/Telegraf/cluster/
@@ -150,7 +149,8 @@ copy_service_config res/swarm/config/Telegraf/datastore/telegraf.conf /opt/docke
 copy_service_config res/swarm/config/Telegraf/host/telegraf.conf /opt/docker/Telegraf/host/
 copy_service_config res/swarm/config/Telegraf/vm/telegraf.conf /opt/docker/Telegraf/vm/
 
- 
+echo
+
 echo " Pull Docker images"
 # Portainer
 echo " Portainer"
