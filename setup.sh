@@ -3,44 +3,6 @@
 CHECK="$(tput cuu1) [$(tput setaf 2; tput bold)✓$(tput setaf 7; tput sgr0)]"
 SPACE="    "
 
-
-function pull_docker_images () {
-  for i in $*; do
-    echo -n "${SPACE} $i [  "
-    docker pull $i >> /dev/null &
-    PID=$!
-    c=1
-    sp="/-\|"
-    while [ -d /proc/$PID ]; do
-      printf "\b\b${sp:c++%${#sp}:1}]"
-      sleep 0.5
-    done
-    echo
-    echo "${CHECK} $i     "
-  done
-}
-
-function create_swarm_configs () {
-  for config in $*; do
-    f=`basename $config`
-    echo "${SPACE} $f"
-    docker config create $f $config >> /dev/null
-    echo "${CHECK} $f"
-  done
-}
-
-function make_persistent_storage () {
-  dir=$1
-  perms=$2
-  echo "${SPACE} $dir"
-  mkdir -p $dir >> /dev/null
-  if [ "$perms" != "" ]; then
-    chown -R $perms $dir
-  fi
-  echo "${CHECK} $dir"
-  
-}
-
 function wait_for_service () {
   echo -n "${SPACE} Start services [  "
   i=1
@@ -51,42 +13,6 @@ function wait_for_service () {
   done
   echo
   echo "${CHECK} Start services       "
-}
-
-function make_filesystem () {
-  device=$1
-  mountpoint=$2
-  echo " Set up $device as $mountpoint"
-  echo "${SPACE} Partition disk"
-  parted -s $device mktable gpt > /dev/null
-  parted -s $device mkpart primary 0% 100% > /dev/null
-  echo "${CHECK} Partition disk"
-
-  partition="${device}1"
-  sleep 2
-
-  echo -n "${SPACE} Format filesystem [  "
-  mkfs.ext4 -q $partition > /dev/null &
-  PID=$!
-  c=1
-  sp="/-\|"
-  while [ -d /proc/$PID ]; do
-    printf "\b\b${sp:c++%${#sp}:1}]"
-    sleep 0.5
-  done
-  echo
-  echo "${CHECK} Format filesystem    "
-
-  echo "${SPACE} Add fstab entry"
-  echo "$partition    $mountpoint                    ext4     defaults        1 1" >> /etc/fstab
-  echo "${CHECK} Add fstab entry"
-
-  if [ ! -d $mountpoint ]; then
-    mkdir -p $mountpoint > /dev/null
-  fi
-  echo "${SPACE} Mount filesystem"
-  mount $mountpoint >> /dev/null
-  echo "${CHECK} Mount filesystem"
 }
 
 echo "+------------------------------------------------------------------------------+"
@@ -145,57 +71,7 @@ echo "We've got everything we need to setup, so let's get started!"
 read -p "Hit ENTER to continue"
 echo
 
-echo " Install/remove packages"
-# -------- Packages
-# Remove any version of Docker if it's there
-#echo "${SPACE} Remove old Docker packages"
-#yum remove -qy docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine 2&> /dev/null
-#echo "${CHECK} Remove old Docker packages"
-# Install some dependencies
-echo "${SPACE} Install required packages"
-tdnf install -qy parted jq
-echo "${CHECK} Install required packages"
-# Add the official Docker repo
-#echo "${SPACE} Add the official Docker repo"
-#yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 2&> /dev/null
-#echo "${CHECK} Add the official Docker repo"
-# Install Docker
-#echo "${SPACE} Install Docker"
-#yum install -qy docker-ce docker-ce-cli containerd.io 2&> /dev/null
-#echo "${CHECK} Install Docker"
-echo
-
-echo "DONE"
-read -p "Hit ENTER to continue"
-echo
-
-echo "System setup"
-# --------- Disks/Mounts
-# Create the /var/lib/docker mountpoint
-make_filesystem /dev/sdb /var/lib/docker
-echo
-
-# Create the /opt mountpoint
-make_filesystem /dev/sdc /opt
-echo
-
-echo "DONE"
-read -p "Hit ENTER to continue"
-echo
-
-echo " Configure Docker"
-# -------- Docker
-# Copy the Docker configs
-#echo "${SPACE} Copy the Docker daemon config files"
-#cp -fr res/docker/ /etc/ >> /dev/null
-#echo "${CHECK} Copy the Docker config files"
-
-# Enable, and Start Docker
-echo "${SPACE} Enable and start the Docker service"
-systemctl enable docker 2&> /dev/null
-systemctl start docker 2&> /dev/null
-echo "${CHECK} Enable and start the Docker service"
-
+echo "Setup"
 # Initialize the swarm
 echo "${SPACE} Initialize the Docker Swarm"
 docker swarm init >> /dev/null
@@ -205,28 +81,22 @@ echo
 # Setup some networks
 echo " Create Swarm networks"
 for net in graphhouse-net; do
-  echo "${SPACE} $net"
-  docker network create --driver overlay --attachable $net >> /dev/null
-  echo "${CHECK} $net"
+    echo "${SPACE} $net"
+    docker network create --driver overlay --attachable $net >> /dev/null
+    echo "${CHECK} $net"
 done
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 # Deploy Portainer, using the command-line
-echo "Deploy Portainer"
-echo " Make persistent storage"
-make_persistent_storage /opt/docker/stack.Portainer/service.portainer
-
-echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/portainer.yml | grep image | awk -F\  '{print $2}' | uniq)
+echo "Portainer"
 
 echo " Deploy the stack"
 docker stack deploy --compose-file=res/swarm/stacks/portainer.yml Portainer >> /dev/null &
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}:9000/api/status"
 
 
-echo " Set up Portainer"
+echo " Configure"
 # Change admin password
 echo "${SPACE} Set admin password"
 curl -s -o /dev/null http://${ipfqdn}:9000/api/users/admin/init -H "Content-Type: application/json" -X POST -d '{"username":"admin", "password":"'$adminPass'"}'
@@ -250,50 +120,11 @@ curl -s -o /dev/null http://${ipfqdn}:9000/api/endpoints/${portEndpointID} -X PU
     -d '{"Name": "VTMon", "PublicURL": "'${ipfqdn}'"}'
 echo "${CHECK} Set Endpoint name"
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 
-####### Deploy Traefik, using the Portainer API
-######echo "Deploy Traefik"
-######echo " Make persistent storage"
-######make_persistent_storage /opt/docker/stack.Traefik/service.traefik/logs
-######
-#######echo " Create Docker Swarm config files"
-#######create_swarm_configs $(ls res/swarm/configs/traefik/*)
-######
-######echo " Pull Docker images"
-######pull_docker_images $(cat res/swarm/stacks/traefik.yml | grep image | awk -F\  '{print $2}' | uniq)
-######
-######echo " Deploy the stack"
-######curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
-######    -H "Authorization: Bearer $portAuthToken" \
-######    -H "accept: application/json" \
-######    -H "Content-Type: multipart/form-data" \
-######    -F Name=Traefik \
-######    -F EndpointID=${portEndpointID} \
-######    -F SwarmID=${portSwarmID} \
-######    -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
-######    -F file=@res/swarm/stacks/traefik.yml
-######
-######wait_for_service "curl -s -o /dev/null http://${ipfqdn}:8080/api"
-######echo "DONE"
-######read -p "Hit ENTER to continue"
-######echo
-
-
 # Deploy GraphHouse (Clickhouse + Graphite), using the Portainer API
-echo "Deploy GraphHouse"
-echo " Make persistent storage"
-make_persistent_storage /opt/docker/stack.GraphHouse/service.clickhouse/data/
-make_persistent_storage /opt/docker/stack.GraphHouse/service.clickhouse/metadata
-make_persistent_storage /opt/docker/stack.GraphHouse/service.carbon
-
-echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/graphhouse/*)
-
-echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/graphhouse.yml | grep image | awk -F\  '{print $2}' | uniq)
+echo "GraphHouse"
 
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -308,18 +139,12 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
 #stack_services=`cat res/swarm/stacks/graphite.yml |grep replicas |grep -v 0 |wc -l`
 wait_for_service "[ \`docker service ls | grep GraphHouse | awk '{print \$4}' | grep '1/1' | wc -l\` -eq '5' ]"
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
+
+
 # Deploy Grafana, using the Portainer API
-echo "Deploy Grafana"
-echo " Make persistent storage"
-make_persistent_storage /opt/docker/stack.grafana/service.grafana/data/ 472:472
-#chown -R 472:472 /opt/docker/stack.grafana/service.grafana/data/
-
-echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/grafana.yml |grep image |awk -F\  '{print $2}' |uniq)
-
+echo "Grafana"
 echo " Deploy the stack"
 curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
     -H "Authorization: Bearer $portAuthToken" \
@@ -331,12 +156,10 @@ curl -s -o /dev/null "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpoi
     -F Env="[{ \"name\": \"HOSTIPFQDN\", \"value\": \"${ipfqdn}\"}]" \
     -F file=@res/swarm/stacks/grafana.yml 2&> /dev/null &
 wait_for_service "curl -s -o /dev/null http://${ipfqdn}/api"
-#wait_for_service "curl -s http://${ipfqdn}/api | jq '.docker.backends.\"backend-Grafana-grafana\"' -e > /dev/null"
-###until curl http://${ipfqdn}:8080/api  -s| jq '.docker.backends."backend-Grafana-grafana"' -e > /dev/null ; do
 
 
 # Set Grafana admin password
-echo " Configure Grafana"
+echo " Configure"
 echo "${SPACE} Set admin password"
 curl -s -o /dev/null http://${ipfqdn}/api/admin/users/1/password -X PUT \
     -u admin:admin -H "Content-Type: application/json" -d '{"password":"'$adminPass'"}'
@@ -353,27 +176,27 @@ echo "${CHECK} Graphite"
 # Create Grafana dashboards from the files inside res/grafana/*/*
 echo " Create dashboard folders"
 for f in `ls res/grafana`; do
-  f_name=${f%-*}
-  f_uid=${f#*-}
-  echo "${SPACE} ${f_name}"
-  curl -s -o /dev/null http://${ipfqdn}/api/folders -X POST \
-      -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
-      -d '{ "uid": "'${f_uid}'", "title":"'${f_name}'"}'
-  echo "${CHECK} ${f_name}"
+    f_name=${f%-*}
+    f_uid=${f#*-}
+    echo "${SPACE} ${f_name}"
+    curl -s -o /dev/null http://${ipfqdn}/api/folders -X POST \
+        -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
+        -d '{ "uid": "'${f_uid}'", "title":"'${f_name}'"}'
+    echo "${CHECK} ${f_name}"
 done
 echo " Import dashboards"
 find res/grafana/ -iname *.json | while read file; do
-  dashboard_name="`echo $file | cut -d/ -f4 | awk -F--- '{print $1}'`"
-  folder_name=`echo $file | cut -d/ -f3 | cut -d- -f1`
-  echo "${SPACE} $folder_name/$dashboard_name"
-  folder_uid=`echo $file | cut -d/ -f3 | cut -d- -f2`
-  folder_id=`curl -s -u admin:$adminPass "http://${ipfqdn}/api/folders/${folder_uid}" |jq '.id'`
-#  dashboard_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
-  jq "del(.dashboard.id) | .folderId = ${folder_id}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
-  curl -s -o /dev/null  http://${ipfqdn}/api/dashboards/db -X POST \
-      -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
-      -d @"$file"
-  echo "${CHECK} $folder_name/$dashboard_name"
+    dashboard_name="`echo $file | cut -d/ -f4 | awk -F--- '{print $1}'`"
+    folder_name=`echo $file | cut -d/ -f3 | cut -d- -f1`
+    echo "${SPACE} $folder_name/$dashboard_name"
+    folder_uid=`echo $file | cut -d/ -f3 | cut -d- -f2`
+    folder_id=`curl -s -u admin:$adminPass "http://${ipfqdn}/api/folders/${folder_uid}" |jq '.id'`
+    #  dashboard_uid=`echo $file | cut -d/ -f4 | awk -F--- '{print $2}' | cut -d. -f1`
+    jq "del(.dashboard.id) | .folderId = ${folder_id}" "$file" > "$file.tmp" && mv -f "$file.tmp" "$file"
+    curl -s -o /dev/null  http://${ipfqdn}/api/dashboards/db -X POST \
+        -u admin:$adminPass -H "Accept: application/json" -H "Content-Type: application/json" \
+        -d @"$file"
+    echo "${CHECK} $folder_name/$dashboard_name"
 done
 echo "DONE"
 read -p "Hit ENTER to continue"
@@ -382,12 +205,7 @@ echo
 
 
 # Deploy Telegraf, using the Portainer API
-echo "Deploy Telegraf"
-echo " Create Docker Swarm config files"
-create_swarm_configs $(ls res/swarm/configs/telegraf/*)
-
-echo " Pull Docker images"
-pull_docker_images $(cat res/swarm/stacks/telegraf.yml |grep image |awk -F\  '{print $2}' |uniq)
+echo "Telegraf"
 
 echo " Deploy the stack"
 curl -s "http://${ipfqdn}:9000/api/stacks?type=1&method=file&endpointId=${portEndpointID}" -X POST \
@@ -406,7 +224,6 @@ stack_services=`cat res/swarm/stacks/telegraf.yml |grep replicas |grep -v 0 |wc 
 wait_for_service "[ \`docker service ls | grep Telegraf |awk '{print \$4}' |grep '1/1' |wc -l\` -eq '${stack_services}' ]"
 
 echo "DONE"
-read -p "Hit ENTER to continue"
 echo
 
 echo
@@ -419,6 +236,5 @@ echo "Please visit Grafana at http://${ipfqdn}, and login with admin:${adminPass
 echo
 echo "Should you want/need to check on the status of the system, you can use the following URLs"
 echo "  Portainer (Container manager)     - http://${ipfqdn}:9000"
-echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
+#echo "  Traefik (Load balancer)           - http://${ipfqdn}:8080/dashboard/"
 #echo "  Tabix (Metrics management GUI)    - http://${ipfqdn}:8081/"
-echo

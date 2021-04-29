@@ -1,7 +1,6 @@
 docker stack rm `docker stack ls --format "{{ .Name }}"`
 docker rm -f `docker ps -qa`
-docker config rm `docker config ls -q`
-docker network rm traefik-net
+docker network rm graphhouse-net
 docker swarm leave --force
 rm /opt/docker/stack.* -fR
 systemctl stop docker
